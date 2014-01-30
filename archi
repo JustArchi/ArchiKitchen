@@ -444,6 +444,15 @@ KERNEL_REPACK() {
 	rm -rf kernel
 }
 
+ARCHIDROID_INITD() {
+	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
+		mv -f $ACTIVE_PROJECT/system/bin/debuggerd $ACTIVE_PROJECT/system/bin/debuggerd.real
+		cp -R files/archidroid/initd/system/* $ACTIVE_PROJECT/system/
+	else
+		mv -f $ACTIVE_PROJECT/system/bin/debuggerd.real $ACTIVE_PROJECT/system/bin/debuggerd
+	fi
+}
+
 INITD() {
 	KERNEL_EXTRACT
 	if [ -e kernel/ramdisk/init.rc ]; then
@@ -476,7 +485,7 @@ DEODEX() {
 	for f in $(find $ACTIVE_PROJECT/system -type f -iname "*.odex"); do
 		local FILE=$(basename $f)
 		local FILEDIR=$(dirname $f)
-		echo "Deodxing $FILE"
+		echo "Deodexing $FILE"
 		echo "Disassembling $FILE..."
 		java -Xmx512m -jar files/smali/baksmali.jar -a $API -d $ACTIVE_PROJECT/system/framework -x $FILEDIR/$FILE
 		if [ $? -ne 0 ]; then
@@ -579,6 +588,13 @@ while :; do
 
 	echo "Architecture: [$ARCH] "
 	echo
+	echo -n "ArchiDroid Init.d? "
+	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
+		echo "[NO]"
+	else
+		echo "[YES]"
+	fi
+	echo
 	echo -n "Deodexed? "
 	if [ -e $ACTIVE_PROJECT/system/framework/framework.odex ]; then
 		echo "[NO]"
@@ -606,11 +622,14 @@ while :; do
 	fi
 	echo
 	echo "a - Change architecture (arm/x86)"
-	echo "d - Deodex (no way back!)"
-	echo "z - Zipalign (no way back!)"
-	echo "r - Add/Remove Root"
-	echo "b - Add/Remove Busybox"
-	echo "i - Add Init.d Support (no way back!)"
+	echo
+	echo "adi - Enable/Disable ArchiDroid indepdendent Init.d (software debuggerd hook)"
+	echo "i - Add Init.d Support (DONT TOUCH YET) (hardware kernel hook)"
+	echo
+	echo "d - Deodex Everything"
+	echo "z - Zipalign Everything"
+	echo "r - Enable/Disable Root"
+	echo "b - Enable/Disable Busybox"
 	echo "bb - Build ROM"
 	echo "x - Exit"
 	echo
@@ -622,6 +641,9 @@ while :; do
 			;;
 		"a")
 			CHANGE_ARCHITECTURE
+			;;
+		"adi")
+			ARCHIDROID_INITD
 			;;
 		"d")
 			DEODEX

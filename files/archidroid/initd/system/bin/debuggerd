@@ -1,0 +1,20 @@
+#!/system/bin/sh
+
+# ArchiDroid Backend Fallback
+# JustArchi@JustArchi.net
+# Don't remove this file
+
+# ArchiDroid Fallback call, if needed
+if [ ! -e /dev/HAS_INIT ]; then
+	touch /dev/HAS_INIT
+
+	# Act as indepdendent init.d execute
+	# Also, ignore permissions
+	for f in $(find /system/etc/init.d -type f); do
+		sh $f &
+	done
+fi
+
+# Exec original binary and share everything, including all signals, we won't be able to do anything anymore
+exec debuggerd.real $*
+exit 0

@@ -1,0 +1,3 @@
+#!/system/bin/sh
+touch /dev/HAS_INIT
+exit 0
