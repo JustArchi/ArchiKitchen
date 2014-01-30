@@ -1,1 +1,1 @@
-umount("/system");
+unmount("/system");
