@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
  
 # Copyright 2014 JustArchi@JustArchi.net
 #
@@ -233,13 +233,7 @@ DO_NEWPROJECT() {
 
 	DO_MAKESURE_WEHAVE_SIMG2IMG
 	DO_SIMG2IMG_ALL
-}
-
-DO_MAKESURE_WEHAVE_SIMG2IMG() {
-	if [ ! -e temp/simg2img ]; then
-		mkdir -p temp
-		gcc -O2 tools/simg2img/sparse_crc32.c tools/simg2img/simg2img.c -o temp/simg2img
-	fi
+	DO_MAKESURE_WEHAVE_METAINF
 }
 
 DO_SIMG2IMG_ALL() {
@@ -265,17 +259,137 @@ DO_SIMG2IMG_ALL() {
 	done
 }
 
+DO_MAKESURE_WEHAVE_SIMG2IMG() {
+	if [ ! -e temp/simg2img ]; then
+		mkdir -p temp
+		gcc -O2 tools/simg2img/sparse_crc32.c tools/simg2img/simg2img.c -o temp/simg2img
+	fi
+}
+
+DO_MAKESURE_WEHAVE_METAINF() {
+	mkdir -p $ACTIVE_PROJECT/META-INF/com/google/android
+	cp files/product/generic/update-binary $ACTIVE_PROJECT/META-INF/com/google/android/update-binary
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL"; do
+		cp "files/product/generic/$i" "$ACTIVE_PROJECT/META-INF/com/google/android/$i"
+	done
+	BUILD_UPDATER_SCRIPT
+}
+
+REBUILD_UPDATER-SCRIPT() {
+	local MODE=""
+	local STYLE=""
+	local FILE=""
+	for arg in $@; do
+		case "$arg" in
+			"ADD")
+				MODE="ADD"
+				shift 1
+				;;
+			"DEL")
+				MODE="DEL"
+				shift 1
+				;;
+			"HEAD")
+				FILE="updater-script-HEAD"
+				shift 1
+				;;
+			"SYMLINK")
+				FILE="updater-script-SYMLINKS"
+				shift 1
+				;;
+			"PERMISSIONS")
+				FILE="updater-script-PERMISSIONS"
+				shift 1
+				;;
+			"TAIL")
+				FILE="updater-script-TAIL"
+				shift 1
+				;;
+			"APPEND")
+				STYLE="APPEND"
+				shift 1
+				;;
+			"PREPEND")
+				STYLE="PREPEND"
+				shift 1
+				;;
+			*)
+				continue
+		esac
+	done
+	if [ $MODE == "DEL" ]; then
+		sed -i '/busybox/d' $ACTIVE_PROJECT/META-INF/com/google/android/$FILE #TODO: Handle this through $@? Couldn't find non-conflict way
+	elif [ $MODE == "ADD" ]; then
+		if [ $STYLE == "APPEND" ]; then
+			echo "" >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
+			echo "$@" >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
+		elif [ $STYLE == "PREPEND" ]; then
+			mv $ACTIVE_PROJECT/META-INF/com/google/android/$FILE $ACTIVE_PROJECT/META-INF/com/google/android/$FILE.tmp
+			echo "$@" > $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
+			cat $ACTIVE_PROJECT/META-INF/com/google/android/$FILE.tmp >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
+			rm -f $ACTIVE_PROJECT/META-INF/com/google/android/$FILE.tmp
+		fi
+	fi
+	#BUILD_UPDATER_SCRIPT
+}
+
+BUILD_UPDATER_SCRIPT() {
+	echo -n "" > $ACTIVE_PROJECT/META-INF/com/google/android/updater-script
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL"; do
+		cat "$ACTIVE_PROJECT/META-INF/com/google/android/$i" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
+	done
+	echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
+}
+
+CLEAN_EVERYTHING() {
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL"; do
+		rm -f $ACTIVE_PROJECT/META-INF/com/google/android/$i
+	done
+}
+
+BUSYBOX() {
+	if [ ! -e $ACTIVE_PROJECT/system/xbin/busybox ]; then
+		mkdir -p $ACTIVE_PROJECT/system/xbin
+		cp files/busybox/busybox $ACTIVE_PROJECT/system/xbin/busybox
+		REBUILD_UPDATER-SCRIPT "ADD" "SYMLINK" "APPEND" 'symlink("/system/xbin/busybox", "/system/bin/busybox");'
+		REBUILD_UPDATER-SCRIPT "ADD" "TAIL" "PREPEND" 'run_program("/system/xbin/busybox", "--install", "-s", "/system/xbin");'
+	else
+		rm -f $ACTIVE_PROJECT/system/xbin/busybox
+		REBUILD_UPDATER-SCRIPT "DEL" "SYMLINK" 'symlink("/system/xbin/busybox", "/system/bin/busybox");'
+		REBUILD_UPDATER-SCRIPT "DEL" "TAIL" 'run_program("/system/xbin/busybox", "--install", "-s", "/system/xbin");'
+	fi
+	BUILD_UPDATER_SCRIPT
+	PRESS_ENTER #DEBUG
+}
+
 # Main
 while :; do
 	clear
 
 	echo "Android Kitchen version $VERSION - by JustArchi (@xda-developers.com)"
 	echo "Originally created by dsixda (@xda-developers.com)"
-
+	echo
 	if [ -z "$ACTIVE_PROJECT" ]; then
 		DO_SETPROJECT
-	else
-		echo "Stub, we have working project dir, yay"
+		PRESS_ENTER
+		clear
 	fi
-	PRESS_ENTER
+	if [ ! -e $ACTIVE_PROJECT/system/xbin/busybox ]; then
+		echo "Busybox [NOT-INCLUDED]"
+	else
+		echo "Busybox [BUILT-IN]"
+	fi
+	echo "b - Include/Remove Busybox"
+	echo "x - exit"
+	read CHOICE
+	case "$CHOICE" in
+		"x")
+			exit 0
+			;;
+		"b")
+			BUSYBOX
+			;;
+		*)
+			continue
+	esac
 done
