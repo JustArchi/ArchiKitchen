@@ -15,9 +15,10 @@
 # limitations under the License.
 
 # Initial variables
-VERSION=1.0
+VERSION="1.0"
 TOOLS=(basename dirname clear gcc java perl sed wget od wc cpio zip unzip tar)
 ACTIVE_PROJECT=""
+ARCH="arm"
 
 clear
 echo -n "Please wait"
@@ -352,6 +353,18 @@ CLEAN_EVERYTHING() {
 	done
 }
 
+CHANGE_ARCHITECTURE() {
+	case "$ARCH" in
+		"arm")
+			ARCH="x86"
+			;;
+		"x86")
+			;&
+		*)
+			ARCH="arm"
+	esac
+}
+
 DEODEX() {
 	local API=$(grep "ro.build.version.sdk" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
 	echo "Detected API level $API"
@@ -402,6 +415,7 @@ ROOT() {
 	if [ ! -e $ACTIVE_PROJECT/system/xbin/su ]; then
 		mkdir -p $ACTIVE_PROJECT/system/xbin
 		cp -R files/root/system/* $ACTIVE_PROJECT/system/
+		cp -R files/root/$ARCH/system/* $ACTIVE_PROJECT/system/
 		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/xbin/daemonsu
 		mkdir -p $ACTIVE_PROJECT/system/bin/.ext
 		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/bin/.ext/su
@@ -442,9 +456,11 @@ while :; do
 	if [ -z "$ACTIVE_PROJECT" ]; then
 		DO_SETPROJECT
 		PRESS_ENTER
-		clear
+		continue
 	fi
 
+	echo "Architecture: [$ARCH] "
+	echo
 	echo -n "Deodexed? "
 	if [ -e $ACTIVE_PROJECT/system/framework/framework.odex ]; then
 		echo "[NO]"
@@ -464,14 +480,20 @@ while :; do
 		echo "[YES]"
 	fi
 
+	echo "a - Change architecture (arm/x86)"
 	echo "d - Deodex (no way back!)"
 	echo "r - Add/Remove Root"
 	echo "b - Add/Remove Busybox"
 	echo "x - Exit"
+	echo
+	echo -n "CHOICE: "
 	read CHOICE
 	case "$CHOICE" in
 		"x")
 			exit 0
+			;;
+		"a")
+			CHANGE_ARCHITECTURE
 			;;
 		"d")
 			DEODEX
