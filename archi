@@ -417,8 +417,12 @@ KERNEL_EXTRACT() {
 		rm -rf kernel
 		mkdir -p kernel
 		temp/unpackbootimg -i $ACTIVE_PROJECT/boot.img -o kernel
-		if [ -e boot.img-ramdisk.gz ]; then
-			gunzip kernel/boot.img-ramdisk.gz #TODO: Handle non-gz ramdisk as well, but not now...
+		mkdir -p kernel/ramdisk
+		if [ -e kernel/boot.img-ramdisk.gz ]; then
+			cd kernel/ramdisk
+			#TODO: Handle non-gz ramdisk as well, but not now...
+			gunzip -c ../boot.img-ramdisk.gz | cpio -i
+			cd ../..
 		fi
 	else
 		echo "No kernel found!"
@@ -428,22 +432,31 @@ KERNEL_EXTRACT() {
 }
 
 KERNEL_REPACK() {
-	if [ -e kernel/boot.img-ramdisk ]; then
-		gzip kernel/boot.img-ramdisk
+	if [ -e kernel/ramdisk ]; then
+		cd kernel/ramdisk
+		find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
+		cd ../..
+		temp/mkbootimg --kernel kernel/boot.img-zImage --ramdisk kernel/boot.img-ramdisk-NEW.* -o temp.img
+	else
+		temp/mkbootimg --kernel kernel/boot.img-zImage --ramdisk kernel/boot.img-ramdisk.* -o temp.img
 	fi
-	temp/mkbootimg --kernel kernel/boot.img-zImage --ramdisk kernel/boot.img-ramdisk.gz -o temp.img #TODO: Handle non-gz ramdisk as well, but not now...
 	mv -f temp.img $ACTIVE_PROJECT/boot.img
 	rm -rf kernel
 }
 
 INITD() {
 	KERNEL_EXTRACT
-	gunzip kernel/boot.img-ramdisk.gz
-	sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' kernel/boot.img-ramdisk
-	sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' kernel/boot.img-ramdisk
-	KERNEL_REPACK
-	cp -R files/initd/system/* $ACTIVE_PROJECT/system/
-	REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/initd/updater-script-PERMISSIONS"
+	if [ -e kernel/ramdisk/init.rc ]; then
+		sed -i -e 's/service media /service sysinit \/system\/bin\/sysinit\n    oneshot\n\nservice media /' kernel/ramdisk/init.rc
+		KERNEL_REPACK
+		cp -R files/initd/system/* $ACTIVE_PROJECT/system/
+		REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/initd/updater-script-PERMISSIONS"
+	else
+		echo "ERROR, no init.rc found?!"
+		rm -rf kernel
+		return 1
+	fi
+	PRESS_ENTER
 }
 
 BUILD() {
