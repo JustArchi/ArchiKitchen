@@ -1,0 +1,1 @@
+run_program("/system/xbin/busybox", "--install", "-s", "/system/xbin");
