@@ -236,6 +236,8 @@ DO_NEWPROJECT() {
 	DO_MAKESURE_WEHAVE_SIMG2IMG
 	DO_SIMG2IMG_ALL
 	DO_MAKESURE_WEHAVE_METAINF
+	CHECK_KERNEL
+	BUILD_UPDATER_SCRIPT
 }
 
 DO_SIMG2IMG_ALL() {
@@ -261,6 +263,33 @@ DO_SIMG2IMG_ALL() {
 	done
 }
 
+CHECK_KERNEL() {
+	if [ ! -e $ACTIVE_PROJECT/META-INF/com/google/android/updater-script ] || ([ $(grep -i "boot.img" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ] && [ $(grep -i "zImage" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ]); then
+		echo "WARNING! No kernel path found in current updater-script"
+		echo "This is typical when you're converting image-based rom to zip-based rom"
+		MODEL=$(grep -i "ro.product.model" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
+		echo "Detected ROM model: $MODEL"
+		echo "Make sure it's proper model for your device!"
+		PRESS_ENTER
+		if [ -e files/product/$MODEL/KERNEL ]; then
+			KERNELPATH=$(cat files/product/$MODEL/KERNEL)
+		else
+			echo "This model does not yet exist in our database"
+			echo "Please write your kernel path manualy. Example of kernel path from GT-I9300: /dev/block/mmcblk0p5"
+			echo -n "Kernel path for your model: "
+			read KERNELPATH
+		fi
+		echo "Based on model above and our little database, your kernel path should be $KERNELPATH"
+		echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
+		PRESS_ENTER
+		echo "\"$KERNELPATH\");" >> $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-KERNEL
+		echo "OK, This is the final effect:"
+		cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-KERNEL
+		echo "Make sure that path and syntax is correct, if not, modify it manualy through file $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-KERNEL BEFORE you proceed to the next step"
+		PRESS_ENTER
+	fi
+}
+
 DO_MAKESURE_WEHAVE_SIMG2IMG() {
 	if [ ! -e temp/simg2img ]; then
 		mkdir -p temp
@@ -271,10 +300,9 @@ DO_MAKESURE_WEHAVE_SIMG2IMG() {
 DO_MAKESURE_WEHAVE_METAINF() {
 	mkdir -p $ACTIVE_PROJECT/META-INF/com/google/android
 	cp files/product/generic/update-binary $ACTIVE_PROJECT/META-INF/com/google/android/update-binary
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL"; do
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL"; do
 		cp "files/product/generic/$i" "$ACTIVE_PROJECT/META-INF/com/google/android/$i"
 	done
-	BUILD_UPDATER_SCRIPT
 }
 
 REBUILD_UPDATER-SCRIPT() {
@@ -305,6 +333,10 @@ REBUILD_UPDATER-SCRIPT() {
 				;;
 			"TAIL")
 				FILE="updater-script-TAIL"
+				shift 1
+				;;
+			"KERNEL")
+				FILE="updater-script-KERNEL"
 				shift 1
 				;;
 			"APPEND")
@@ -342,14 +374,14 @@ REBUILD_UPDATER-SCRIPT() {
 
 BUILD_UPDATER_SCRIPT() {
 	echo -n "" > $ACTIVE_PROJECT/META-INF/com/google/android/updater-script
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL"; do
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL"; do
 		cat "$ACTIVE_PROJECT/META-INF/com/google/android/$i" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 		echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 	done
 }
 
 CLEAN_EVERYTHING() {
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL"; do
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL"; do
 		rm -f $ACTIVE_PROJECT/META-INF/com/google/android/$i
 	done
 }
@@ -528,7 +560,6 @@ while :; do
 	echo
 	if [ -z "$ACTIVE_PROJECT" ]; then
 		DO_SETPROJECT
-		PRESS_ENTER
 		continue
 	fi
 
