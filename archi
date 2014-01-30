@@ -344,8 +344,8 @@ BUILD_UPDATER_SCRIPT() {
 	echo -n "" > $ACTIVE_PROJECT/META-INF/com/google/android/updater-script
 	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL"; do
 		cat "$ACTIVE_PROJECT/META-INF/com/google/android/$i" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
+		echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 	done
-	echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 }
 
 CLEAN_EVERYTHING() {
@@ -412,6 +412,16 @@ INITD() {
 	KERNEL_REPACK
 	cp -R files/initd/system/* $ACTIVE_PROJECT/system/
 	REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/initd/updater-script-PERMISSIONS"
+}
+
+BUILD() {
+	cd $ACTIVE_PROJECT
+	zip -ry $ACTIVE_PROJECT.zip . -x META-INF/com/google/android/updater-script-HEAD META-INF/com/google/android/updater-script-SYMLINKS META-INF/com/google/android/updater-script-PERMISSIONS META-INF/com/google/android/updater-script-TAIL
+	cd ..
+	mkdir -p OUTPUT_ZIP
+	mv -f $ACTIVE_PROJECT/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$ACTIVE_PROJECT.zip
+	echo "Done, your ROM is available in $ACTIVE_PROJECT.zip"
+	PRESS_ENTER
 }
 
 DEODEX() {
@@ -556,6 +566,7 @@ while :; do
 	echo "r - Add/Remove Root"
 	echo "b - Add/Remove Busybox"
 	echo "i - Add Init.d Support (no way back!)"
+	echo "bb - Build ROM"
 	echo "x - Exit"
 	echo
 	echo -n "CHOICE: "
@@ -581,6 +592,9 @@ while :; do
 			;;
 		"i")
 			INITD
+			;;
+		"bb")
+			BUILD
 			;;
 		*)
 			continue
