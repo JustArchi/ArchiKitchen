@@ -447,7 +447,8 @@ KERNEL_REPACK() {
 INITD() {
 	KERNEL_EXTRACT
 	if [ -e kernel/ramdisk/init.rc ]; then
-		sed -i -e 's/service media /service sysinit \/system\/bin\/sysinit\n    oneshot\n\nservice media /' kernel/ramdisk/init.rc
+		sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' kernel/ramdisk/init.rc
+		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' kernel/ramdisk/init.rc
 		KERNEL_REPACK
 		cp -R files/initd/system/* $ACTIVE_PROJECT/system/
 		REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/initd/updater-script-PERMISSIONS"
