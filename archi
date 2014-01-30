@@ -487,7 +487,7 @@ DEODEX() {
 		local FILEDIR=$(dirname $f)
 		echo "Deodexing $FILE"
 		echo "Disassembling $FILE..."
-		java -Xmx512m -jar files/smali/baksmali.jar -a $API -d $ACTIVE_PROJECT/system/framework -x $FILEDIR/$FILE
+		java -Xmx512m -jar tools/smali/baksmali.jar -a $API -d $ACTIVE_PROJECT/system/framework -x $FILEDIR/$FILE
 		if [ $? -ne 0 ]; then
 			echo "ERROR DEODEXING $FILE, ABORTING!"
 			rm -rf out
@@ -495,7 +495,7 @@ DEODEX() {
 			return 1
 		fi
 		echo "Assembling into classes.dex..."
-		java -Xmx512m -jar files/smali/smali.jar -a $API -o classes.dex out
+		java -Xmx512m -jar tools/smali/smali.jar -a $API -o classes.dex out
 		if [ ! -e classes.dex ]; then
 			echo "ERROR DEODEXING $FILE, ABORTING!"
 			rm -rf out
