@@ -366,6 +366,54 @@ CHANGE_ARCHITECTURE() {
 	esac
 }
 
+KERNEL_EXTRACT() {
+	mkdir -p temp
+	if [ ! -e temp/mkbootimg ]; then
+		cd tools/kernel/mkbootimg
+		make
+		if [ ! -e mkbootimg ] || [ ! -e unpackbootimg ]; then
+			echo "ERROR! Something went wrong with compilation of mkbootimg!"
+			PRESS_ENTER
+			return 1
+		fi
+		cp mkbootimg ../../../temp/mkbootimg
+		cp unpackbootimg ../../../temp/unpackbootimg
+		make clean
+		cd ../../..
+	fi
+	if [ -e $ACTIVE_PROJECT/boot.img ] ; then
+		rm -rf kernel
+		mkdir -p kernel
+		temp/unpackbootimg -i $ACTIVE_PROJECT/boot.img -o kernel
+		if [ -e boot.img-ramdisk.gz ]; then
+			gunzip kernel/boot.img-ramdisk.gz #TODO: Handle non-gz ramdisk as well, but not now...
+		fi
+	else
+		echo "No kernel found!"
+		PRESS_ENTER
+		return 1
+	fi
+}
+
+KERNEL_REPACK() {
+	if [ -e kernel/boot.img-ramdisk ]; then
+		gzip kernel/boot.img-ramdisk
+	fi
+	temp/mkbootimg --kernel kernel/boot.img-zImage --ramdisk kernel/boot.img-ramdisk.gz -o temp.img #TODO: Handle non-gz ramdisk as well, but not now...
+	mv -f temp.img $ACTIVE_PROJECT/boot.img
+	rm -rf kernel
+}
+
+INITD() {
+	KERNEL_EXTRACT
+	gunzip kernel/boot.img-ramdisk.gz
+	sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' kernel/boot.img-ramdisk
+	sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' kernel/boot.img-ramdisk
+	KERNEL_REPACK
+	cp -R files/initd/system/* $ACTIVE_PROJECT/system/
+	REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/initd/updater-script-PERMISSIONS"
+}
+
 DEODEX() {
 	local API=$(grep "ro.build.version.sdk" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
 	echo "Detected API level $API"
@@ -507,6 +555,7 @@ while :; do
 	echo "z - Zipalign (no way back!)"
 	echo "r - Add/Remove Root"
 	echo "b - Add/Remove Busybox"
+	echo "i - Add Init.d Support (no way back!)"
 	echo "x - Exit"
 	echo
 	echo -n "CHOICE: "
@@ -529,6 +578,9 @@ while :; do
 			;;
 		"b")
 			BUSYBOX
+			;;
+		"i")
+			INITD
 			;;
 		*)
 			continue
