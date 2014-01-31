@@ -18,6 +18,7 @@
 VERSION="1.0"
 TOOLS=(basename dirname clear gcc java perl sed wget od wc cpio zip unzip tar)
 ACTIVE_PROJECT=""
+MODEMINCLUDED=false
 ARCH="arm"
 ALIGN=4
 
@@ -197,39 +198,46 @@ DO_NEWPROJECT() {
 	ACTIVE_PROJECT+="$(date '+%m%d%y_%H%M%S')"
 	echo "Creating $ACTIVE_PROJECT"
 	mkdir -p $ACTIVE_PROJECT/system
-	cp $SYSTEMDIR/boot.img $ACTIVE_PROJECT/
+	cp $SYSTEMDIR/boot.img $ACTIVE_PROJECT/boot.img
 
 	# TODO: Support non-ext4 filesystems
 	FS="ext4"
 
-	cp $SYSTEMDIR/$SYSTEMFILE $ACTIVE_PROJECT/system.img.$FS
-	for EXTRA in 'cache.img'; do
+	cp $SYSTEMDIR/$SYSTEMFILE $ACTIVE_PROJECT/system.img
+	for EXTRA in 'cache.img' 'modem.bin'; do
 		if [ -e $SYSTEMDIR/$EXTRA ]; then
-			echo "Found $EXTRA"
+			echo "Found extra $EXTRA file"
+			echo "Do you want to include this file in your ROM?"
 			case "$EXTRA" in
 				"cache.img")
-					echo "Do you want to include found cache.img file?"
-					echo "This file usually contains CSC stuff, say yes if you're unsure"
-					echo
-					echo "y - Yes"
-					echo "n - No"
-					echo -n "CHOICE: "
-					read CHOICE
-					case "$CHOICE" in
-						"n")
-							continue
-							;;
-						"y")
-							cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA.$FS
-							;;
-						*)
-							echo "Unknown choice, guessing yes"
-							cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA.$FS
-					esac
+					echo "This file usually contains CSC stuff. Say yes if you're unsure"
+					;;
+				"modem.bin")
+					echo "This file usually contains low-level binary code responsible for mobile connection. Say no if you're unsure"
 					;;
 				*)
-					cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA.$FS
+					continue
 			esac
+			echo
+			echo "y - Yes"
+			echo "n - No"
+			read -p "CHOICE: " CHOICE
+			case "$CHOICE" in
+				"n")
+					continue
+					;;
+				"y")
+					cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
+					;;
+				*)
+					echo "Unknown choice, guessing yes"
+					cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
+			esac
+		fi
+	done
+	for PARTITION in 'system.img' 'cache.img'; do
+		if [ -e $ACTIVE_PROJECT/$PARTITION ]; then
+			mv -f $ACTIVE_PROJECT/$PARTITION $ACTIVE_PROJECT/$PARTITION.$FS
 		fi
 	done
 
@@ -237,6 +245,7 @@ DO_NEWPROJECT() {
 	DO_SIMG2IMG_ALL
 	DO_MAKESURE_WEHAVE_METAINF
 	CHECK_KERNEL
+	CHECK_MODEM
 	BUILD_UPDATER_SCRIPT
 }
 
@@ -267,7 +276,7 @@ CHECK_KERNEL() {
 	if [ ! -e $ACTIVE_PROJECT/META-INF/com/google/android/updater-script ] || ([ $(grep -i "boot.img" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ] && [ $(grep -i "zImage" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ]); then
 		echo "WARNING! No kernel path found in current updater-script"
 		echo "This is typical when you're converting image-based rom to zip-based rom"
-		MODEL=$(grep -i "ro.product.model" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
+		local MODEL=$(grep -i "ro.product.model" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
 		echo "Detected ROM model: $MODEL"
 		echo "Make sure it's proper model for your device!"
 		PRESS_ENTER
@@ -290,6 +299,33 @@ CHECK_KERNEL() {
 	fi
 }
 
+CHECK_MODEM() {
+	if [ -e $ACTIVE_PROJECT/modem.bin ]; then
+		echo "Modem.bin file found"
+		local MODEL=$(grep -i "ro.product.model" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
+		echo "Detected ROM model: $MODEL"
+		echo "Make sure it's proper model for your device!"
+		PRESS_ENTER
+		if [ -e files/product/$MODEL/MODEM ]; then
+			MODEMPATH=$(cat files/product/$MODEL/MODEM)
+		else
+			echo "This model does not yet exist in our database"
+			echo "Please write your modem path manualy. Example of modem path from GT-I9300: /dev/block/mmcblk0p7"
+			echo -n "Modem path for your model: "
+			read MODEMPATH
+		fi
+		echo "Based on model above and our little database, your modem path should be $MODEMPATH"
+		echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
+		PRESS_ENTER
+		echo "\"$MODEMPATH\");" >> $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM
+		echo "OK, This is the final effect:"
+		cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM
+		echo "Make sure that path and syntax is correct, if not, modify it manualy through file $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM BEFORE you proceed to the next step"
+		PRESS_ENTER
+		MODEMINCLUDED=true
+	fi
+}
+
 DO_MAKESURE_WEHAVE_SIMG2IMG() {
 	if [ ! -e temp/simg2img ]; then
 		mkdir -p temp
@@ -300,7 +336,7 @@ DO_MAKESURE_WEHAVE_SIMG2IMG() {
 DO_MAKESURE_WEHAVE_METAINF() {
 	mkdir -p $ACTIVE_PROJECT/META-INF/com/google/android
 	cp files/product/generic/update-binary $ACTIVE_PROJECT/META-INF/com/google/android/update-binary
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL"; do
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL" "updater-script-MODEM"; do
 		cp "files/product/generic/$i" "$ACTIVE_PROJECT/META-INF/com/google/android/$i"
 	done
 }
@@ -337,6 +373,10 @@ REBUILD_UPDATER-SCRIPT() {
 				;;
 			"KERNEL")
 				FILE="updater-script-KERNEL"
+				shift 1
+				;;
+			"MODEM")
+				FILE="updater-script-MODEM"
 				shift 1
 				;;
 			"APPEND")
@@ -378,10 +418,14 @@ BUILD_UPDATER_SCRIPT() {
 		cat "$ACTIVE_PROJECT/META-INF/com/google/android/$i" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 		echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 	done
+	if ($MODEMINCLUDED); then
+		cat "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
+		echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
+	fi
 }
 
 CLEAN_EVERYTHING() {
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL"; do
+	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL" "updater-script-MODEM"; do
 		rm -f $ACTIVE_PROJECT/META-INF/com/google/android/$i
 	done
 }
