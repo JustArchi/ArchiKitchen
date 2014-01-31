@@ -547,7 +547,7 @@ BUILD() {
 DEODEX() {
 	local API=$(grep "ro.build.version.sdk" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
 	echo "Detected API level $API"
-	for f in $(find $ACTIVE_PROJECT/system -type f -iname "*.odex"); do
+	for f in $(find $ACTIVE_PROJECT -type f -iname "*.odex"); do
 		local FILE=$(basename $f)
 		local FILEDIR=$(dirname $f)
 		echo "Deodexing $FILE"
