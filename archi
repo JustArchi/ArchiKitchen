@@ -457,35 +457,40 @@ KERNEL_EXTRACT() {
 		make clean
 		cd ../../..
 	fi
-	if [ -e $ACTIVE_PROJECT/boot.img ] ; then
-		rm -rf kernel
-		mkdir -p kernel
-		temp/unpackbootimg -i $ACTIVE_PROJECT/boot.img -o kernel
-		mkdir -p kernel/ramdisk
-		if [ -e kernel/boot.img-ramdisk.gz ]; then
-			cd kernel/ramdisk
+	if [ -e $ACTIVE_PROJECT/boot.img ] && [ ! -e $ACTIVE_PROJECT/kernel ]; then
+		rm -rf $ACTIVE_PROJECT/kernel
+		mkdir -p $ACTIVE_PROJECT/kernel
+		temp/unpackbootimg -i $ACTIVE_PROJECT/boot.img -o $ACTIVE_PROJECT/kernel
+		mkdir -p $ACTIVE_PROJECT/kernel/ramdisk
+		if [ -e $ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz ]; then
+			cd $ACTIVE_PROJECT/kernel/ramdisk
 			#TODO: Handle non-gz ramdisk as well, but not now...
 			gunzip -c ../boot.img-ramdisk.gz | cpio -i
-			cd ../..
+			cd ../../..
 		fi
 	else
-		echo "No kernel found!"
+		echo "No kernel found or kernel is already extracted!"
 		PRESS_ENTER
 		return 1
 	fi
 }
 
 KERNEL_REPACK() {
-	if [ -e kernel/ramdisk ]; then
-		cd kernel/ramdisk
-		find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
-		cd ../..
-		temp/mkbootimg --kernel kernel/boot.img-zImage --ramdisk kernel/boot.img-ramdisk-NEW.* -o temp.img
+	if [ -e $ACTIVE_PROJECT/kernel ]; then
+		if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
+			cd $ACTIVE_PROJECT/kernel/ramdisk
+			find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
+			cd ../../..
+			temp/mkbootimg --kernel $ACTIVE_PROJECT/kernel/boot.img-zImage --ramdisk $ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.* -o $ACTIVE_PROJECT/temp.img
+		else
+			temp/mkbootimg --kernel $ACTIVE_PROJECT/kernel/boot.img-zImage --ramdisk $ACTIVE_PROJECT/kernel/boot.img-ramdisk.* -o $ACTIVE_PROJECT/temp.img
+		fi
+		mv -f $ACTIVE_PROJECT/temp.img $ACTIVE_PROJECT/boot.img
+		rm -rf $ACTIVE_PROJECT/kernel
 	else
-		temp/mkbootimg --kernel kernel/boot.img-zImage --ramdisk kernel/boot.img-ramdisk.* -o temp.img
+		echo "No extracted kernel found!"
+		PRESS_ENTER
 	fi
-	mv -f temp.img $ACTIVE_PROJECT/boot.img
-	rm -rf kernel
 }
 
 ARCHIDROID_INITD() {
@@ -646,8 +651,24 @@ while :; do
 		continue
 	fi
 
+	echo "-------------------------------------"
+	ALLFINE=true
+	if [ -e $ACTIVE_PROJECT/kernel ]; then
+		ALLFINE=false
+		echo "WARNING: Unpacked kernel found"
+	fi
+	echo -n "Project status: "
+	if ($ALLFINE); then
+		echo "OK"
+	else
+		echo "WARNING"
+	fi
+	echo "-------------------------------------"
+
+	echo
 	echo "Architecture: [$ARCH] "
 	echo
+
 	echo -n "ArchiDroid Init.d? "
 	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
 		echo "[NO]"
@@ -681,6 +702,7 @@ while :; do
 		echo "[YES]"
 	fi
 	echo
+	echo "-------------------------------------------------------------------------------"
 	echo "a - Change architecture (arm/x86)"
 	echo
 	echo "adi - Enable/Disable ArchiDroid indepdendent Init.d (software debuggerd hook)"
@@ -690,6 +712,9 @@ while :; do
 	echo "z - Zipalign Everything"
 	echo "r - Enable/Disable Root"
 	echo "b - Enable/Disable Busybox"
+	echo
+	echo "ku - Unpack kernel"
+	echo "kr - Repack kernel"
 	echo "bb - Build ROM"
 	echo "x - Exit"
 	echo
@@ -720,8 +745,19 @@ while :; do
 		"i")
 			INITD
 			;;
+		"ku")
+			KERNEL_EXTRACT
+			;;
+		"kr")
+			KERNEL_REPACK
+			;;
 		"bb")
-			BUILD
+			if ($ALLFINE); then
+				BUILD
+			else
+				echo "ERROR: Can't build ROM in actual status, please check warings above and correct them!"
+				PRESS_ENTER
+			fi
 			;;
 		*)
 			continue
