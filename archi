@@ -219,19 +219,13 @@ DO_NEWPROJECT() {
 					continue
 			esac
 			echo
-			echo "y - Yes"
-			echo "n - No"
-			read -p "CHOICE: " CHOICE
+			read -p "Include? [y/n]: " CHOICE
 			case "$CHOICE" in
-				"n")
-					continue
-					;;
 				"y")
 					cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
 					;;
 				*)
-					echo "Unknown choice, guessing yes"
-					cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
+					continue
 			esac
 		fi
 	done
@@ -540,8 +534,20 @@ BUILD() {
 	cd ..
 	mkdir -p OUTPUT_ZIP
 	mv -f $ACTIVE_PROJECT/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$ACTIVE_PROJECT.zip
-	echo "Done, your ROM is available in $ACTIVE_PROJECT.zip"
+	echo "Done, your ROM is available in OUTPUT_ZIP/$ACTIVE_PROJECT.zip"
+	read -p "Rename it? [y/n]: " CHOICE
+	case "$CHOICE" in
+		"y")
+			read -p "New name: " NAME
+			mv -f OUTPUT_ZIP/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$NAME
+			;;
+		*)
+			continue
+	esac
+	echo "All done, your ROM should be ready!"
+	echo "Thank you for using ArchiKitchen!"
 	PRESS_ENTER
+	exit 0
 }
 
 DEODEX() {
@@ -588,7 +594,7 @@ DEODEX() {
 		rm -f $f
 		rm -rf out
 	done
-	echo "Deodxing finished"
+	echo "Deodexing finished"
 	PRESS_ENTER
 }
 
@@ -653,9 +659,17 @@ while :; do
 
 	echo "-------------------------------------"
 	ALLFINE=true
-	if [ -e $ACTIVE_PROJECT/kernel ]; then
+	if [ -d $ACTIVE_PROJECT/kernel ]; then
 		ALLFINE=false
 		echo "WARNING: Unpacked kernel found"
+	fi
+	if [ ! -f $ACTIVE_PROJECT/boot.img ]; then
+		ALLFINE=false
+		echo "WARNING: No boot.img found, ROM will not boot properly"
+	fi
+	if [ ! -d $ACTIVE_PROJECT/META-INF ]; then
+		ALLFINE=false
+		echo "WARNING: No META-INF folder found, this is not a ROM"
 	fi
 	echo -n "Project status: "
 	if ($ALLFINE); then
