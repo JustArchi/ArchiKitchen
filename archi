@@ -101,13 +101,7 @@ DO_SETPROJECT() {
 				echo "Error, you didn't select anything"
 				return 1
 			else
-				if [ -e $ACTIVE_PROJECT/boot.img ] && [ -e $ACTIVE_PROJECT/system ]; then
-					echo "OK, current active project is now $ACTIVE_PROJECT"
-				else
-					ACTIVE_PROJECT=""
-					echo "Sorry, could not find boot.img and system folder in your project"
-					return 1
-				fi
+				echo "OK, current active project is now $ACTIVE_PROJECT"
 			fi
 	esac
 	return 0
