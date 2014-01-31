@@ -49,10 +49,14 @@ PRESS_ENTER() {
 
 ROOT_EXECUTE() {
 	if [ $(whoami) == "root" ]; then
-		$@
+		"$@"
 	else
 		echo "Root access is required! I'm about to execute command $@"
-		sudo $@
+		if [ ! -z $(which sudo) ]; then
+			sudo "$@"
+		else
+			su -c "$@"
+		fi
 	fi
 }
 
