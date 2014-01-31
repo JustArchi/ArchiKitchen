@@ -109,6 +109,22 @@ DO_SETPROJECT() {
 
 DO_NEWPROJECT() {
 	clear
+	echo "You can create a new bare bones project or a project based on a base drop"
+	echo "In most situations you want to extract the base, but bare bones project may be useful f.e. for deodexing a set of apps only"
+	echo
+	echo "b - Create bare bones project"
+	echo "e - Extract a ROM and use as base"
+	read -p "Which one you want to create? [b/e]: " CHOICE
+	case "$CHOICE" in
+		"e")
+			;;
+		*)
+			ACTIVE_PROJECT="PROJECT_"
+			ACTIVE_PROJECT+="$(date '+%m%d%y_%H%M%S')"
+			echo "Creating bare $ACTIVE_PROJECT"
+			mkdir -p $ACTIVE_PROJECT/system
+			return 0
+	esac
 	echo "ArchiKitchen currently supports system in system.img and system.img.ext4 format"
 	echo "Please put proper base drop in base_drops folder"
 	echo "It can be standalone system.img(.ext4) file, or an archive, which contains such file"
@@ -123,7 +139,12 @@ DO_NEWPROJECT() {
 			FILE=$(basename $f)
 			case "$FILE" in
 				"system.img")
-					;&
+					SYSTEMDIR=$(dirname $f)
+					SYSTEMFILE=$(basename $f)
+					echo "Found $SYSTEMDIR/$SYSTEMFILE, which should be the proper file"
+					SEARCH=false
+					break
+					;;
 				"system.img.ext4")
 					SYSTEMDIR=$(dirname $f)
 					SYSTEMFILE=$(basename $f)
@@ -132,7 +153,6 @@ DO_NEWPROJECT() {
 					break
 					;;
 				*)
-					continue
 			esac
 		done
 		if [ -z "$SYSTEMFILE" ]; then
@@ -210,7 +230,6 @@ DO_NEWPROJECT() {
 					echo "This file usually contains low-level binary code responsible for mobile connection. Say no if you're unsure"
 					;;
 				*)
-					continue
 			esac
 			echo
 			read -p "Include? [y/n]: " CHOICE
@@ -219,7 +238,6 @@ DO_NEWPROJECT() {
 					cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
 					;;
 				*)
-					continue
 			esac
 		fi
 	done
@@ -376,7 +394,6 @@ REBUILD_UPDATER-SCRIPT() {
 				shift 1
 				;;
 			*)
-				continue
 		esac
 	done
 	if [ $MODE == "DEL" ]; then
@@ -424,7 +441,8 @@ CHANGE_ARCHITECTURE() {
 			ARCH="x86"
 			;;
 		"x86")
-			;&
+			ARCH="arm"
+			;;
 		*)
 			ARCH="arm"
 	esac
@@ -481,6 +499,11 @@ KERNEL_REPACK() {
 	fi
 }
 
+KERNEL_ABORT() {
+	rm -rf $ACTIVE_PROJECT/kernel
+	rm -f $ACTIVE_PROJECT/temp.img
+}
+
 ARCHIDROID_INITD() {
 	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
 		mv -f $ACTIVE_PROJECT/system/bin/debuggerd $ACTIVE_PROJECT/system/bin/debuggerd.real
@@ -507,7 +530,25 @@ INITD() {
 }
 
 BUILD() {
+	BUILD_UPDATER_SCRIPT
+	echo "Sometimes kitchen may produce an incorrect updater-script file, that's why you're asked to review updater-script and eventually fix it if needed BEFORE building ROM"
+	echo "Updater-script is based on so-called 'segments' available in the same directory - META-INF/com/google/android"
+	echo "Are you ready?"
+	PRESS_ENTER
+	echo "-=-= UPDATER-SCRIPT START =-=-"
+	cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script
+	echo "-=-= UPDATER-SCRIPT EOF =-=-"
+	read -p "Are you REALLY sure that above updater-script is correct? ESPECIALLY block-based paths? [y/n]: " CHOICE
+	case "$CHOICE" in
+		"y")
+			;;
+		*)
+			echo "OK, correct your updater-script and/or it's segments and come back when you're finished"
+			PRESS_ENTER
+			return 0
+	esac
 	local COMPLEVEL=""
+	echo
 	echo "Which compression level do you want to use?"
 	echo "0 - Store (fastest, no compression at all)"
 	echo "g - Guess (moderate speed and compression, chosen by zip utility based on content)"
@@ -521,7 +562,6 @@ BUILD() {
 			COMPLEVEL="-9"
 			;;
 		*)
-			continue
 	esac
 	cd $ACTIVE_PROJECT
 	zip -ry $COMPLEVEL $ACTIVE_PROJECT.zip . -x META-INF/com/google/android/updater-script-HEAD META-INF/com/google/android/updater-script-SYMLINKS META-INF/com/google/android/updater-script-PERMISSIONS META-INF/com/google/android/updater-script-TAIL META-INF/com/google/android/updater-script-KERNEL
@@ -536,7 +576,6 @@ BUILD() {
 			mv -f OUTPUT_ZIP/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$NAME
 			;;
 		*)
-			continue
 	esac
 	echo "All done, your ROM should be ready!"
 	echo "Thank you for using ArchiKitchen!"
@@ -723,6 +762,8 @@ while :; do
 	echo
 	echo "ku - Unpack kernel"
 	echo "kr - Repack kernel"
+	echo "ka - Abort repacking of kernel"
+	echo
 	echo "bb - Build ROM"
 	echo "x - Exit"
 	echo
@@ -759,6 +800,9 @@ while :; do
 		"kr")
 			KERNEL_REPACK
 			;;
+		"ka")
+			KERNEL_ABORT
+			;;
 		"bb")
 			if ($ALLFINE); then
 				BUILD
@@ -768,6 +812,5 @@ while :; do
 			fi
 			;;
 		*)
-			continue
 	esac
 done
