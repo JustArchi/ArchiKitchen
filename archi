@@ -253,6 +253,7 @@ DO_NEWPROJECT() {
 
 	DO_MAKESURE_WEHAVE_SIMG2IMG
 	DO_SIMG2IMG_ALL
+	rm -rf $ACTIVE_PROJECT/META-INF # We don't want old junk from cache or system partitions, it's invalid anyway
 	DO_MAKESURE_WEHAVE_METAINF
 	CHECK_KERNEL
 	CHECK_MODEM
@@ -270,9 +271,10 @@ DO_SIMG2IMG_ALL() {
 		IMGNAME=$(basename "$f" | cut -d'.' -f1)
 		case "$IMGNAME" in
 			"cache")
-				unzip -q /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip -d $ACTIVE_PROJECT/
-				# Delete old META-INF
-				rm -rf $ACTIVE_PROJECT/META-INF
+				if [ -e /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip ]; then
+					echo "Found common sec_csc.zip file, this is CSC provided by Samsung, including it"
+					unzip -q /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip -d $ACTIVE_PROJECT/
+				fi
 				;;
 			*)
 				cp -R /tmp/ArchiKitchenLOOP/* $ACTIVE_PROJECT/$IMGNAME/
@@ -431,6 +433,7 @@ BUILD_UPDATER_SCRIPT() {
 		cat "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 		echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
 	fi
+	sed -i '/^$/d' $ACTIVE_PROJECT/META-INF/com/google/android/updater-script # This removes empty lines added above
 }
 
 CLEAN_EVERYTHING() {
