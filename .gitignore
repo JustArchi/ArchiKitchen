@@ -12,3 +12,4 @@ bootimg_*
 csc_*
 todo.txt
 *.swp
+/archi~
