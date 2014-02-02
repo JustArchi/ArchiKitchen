@@ -114,7 +114,7 @@ DO_SETPROJECT() {
 DO_NEWPROJECT() {
 	clear
 	echo "You can create a new bare bones project or a project based on a base drop"
-	echo "In most situations you want to extract the base, but bare bones project may be useful f.e. for deodexing a set of apps only"
+	echo "In most situations you want to extract the base, but bare bones project may be useful i.e. for deodexing a set of apps only"
 	echo
 	echo "b - Create bare bones project"
 	echo "e - Extract a ROM and use as base"
