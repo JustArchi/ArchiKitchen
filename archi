@@ -660,13 +660,13 @@ ROOT() {
 		cp -R files/root/$ARCH/system/* $ACTIVE_PROJECT/system/
 		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/xbin/daemonsu
 		mkdir -p $ACTIVE_PROJECT/system/bin/.ext
-		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/bin/.ext/su
+		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/bin/.ext/.su
 		REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/root/updater-script-PERMISSIONS"
 	else
 		rm -f $ACTIVE_PROJECT/system/app/Superuser.apk
 		rm -f $ACTIVE_PROJECT/system/xbin/su
 		rm -f $ACTIVE_PROJECT/system/xbin/daemonsu
-		rm -f $ACTIVE_PROJECT/system/bin/.ext/su
+		rm -f $ACTIVE_PROJECT/system/bin/.ext/.su
 		rm -f $ACTIVE_PROJECT/system/etc/init.d/99SuperSUDaemon
 		rm -f $ACTIVE_PROJECT/system/etc/.installed_su_daemon
 		REBUILD_UPDATER-SCRIPT "DEL" "PERMISSIONS" "u:object_r:su_exec:s0" #TODO1
