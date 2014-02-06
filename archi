@@ -238,10 +238,8 @@ DO_NEWPROJECT() {
 			echo
 			read -p "Include? [y/n]: " CHOICE
 			case "$CHOICE" in
-				"y")
-					cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
-					;;
-				*)
+				n|N) ;;
+				*) cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
 			esac
 		fi
 	done
@@ -547,9 +545,7 @@ BUILD() {
 	echo "-=-= UPDATER-SCRIPT EOF =-=-"
 	read -p "Are you REALLY sure that above updater-script is correct? ESPECIALLY block-based paths? [y/n]: " CHOICE
 	case "$CHOICE" in
-		"y")
-			;;
-		*)
+		n|N)
 			echo "OK, correct your updater-script and/or it's segments and come back when you're finished"
 			PRESS_ENTER
 			return 0
@@ -578,11 +574,10 @@ BUILD() {
 	echo "Done, your ROM is available in OUTPUT_ZIP/$ACTIVE_PROJECT.zip"
 	read -p "Rename it? [y/n]: " CHOICE
 	case "$CHOICE" in
-		"y")
+		n|N) ;;
+		*)
 			read -p "New name: " NAME
 			mv -f OUTPUT_ZIP/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$NAME
-			;;
-		*)
 	esac
 	echo "All done, your ROM should be ready!"
 	echo "Thank you for using ArchiKitchen!"
@@ -596,10 +591,8 @@ DEODEX() {
 	echo "Usually you don't want to change this value"
 	read -p "Change it? [y/n]: " CHOICE
 	case "$CHOICE" in
-		"y")
-			read -p "Your selected API level: " API
-			;;
-		*)
+		n|N) ;;
+		*) read -p "Your selected API level: " API
 	esac
 	for f in $(find $ACTIVE_PROJECT -type f -iname "*.odex"); do
 		local FILE=$(basename $f)
