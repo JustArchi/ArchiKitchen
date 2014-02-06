@@ -82,10 +82,10 @@ DO_SETPROJECT() {
 	echo -n "CHOICE: "
 	read CHOICE
 	case "$CHOICE" in
-		"n")
+		n|N)
 			DO_NEWPROJECT
 			;;
-		"x")
+		x|X)
 			exit 0
 			;;
 		*)
@@ -120,7 +120,7 @@ DO_NEWPROJECT() {
 	echo "e - Extract a ROM and use as base"
 	read -p "Which one you want to create? [b/e]: " CHOICE
 	case "$CHOICE" in
-		"e")
+		e|E)
 			;;
 		*)
 			ACTIVE_PROJECT="PROJECT_"
@@ -156,7 +156,6 @@ DO_NEWPROJECT() {
 					SEARCH=false
 					break
 					;;
-				*)
 			esac
 		done
 		if [ -z "$SYSTEMFILE" ]; then
@@ -168,10 +167,10 @@ DO_NEWPROJECT() {
 			echo -n "CHOICE: "
 			read CHOICE
 			case "$CHOICE" in
-				"r")
+				r|R)
 					clear
 					;;
-				"d")
+				d|D)
 					COUNT=0
 					for i in $(find base_drops/ -type f); do
 						COUNT=$(expr $COUNT + 1)
@@ -202,7 +201,7 @@ DO_NEWPROJECT() {
 						return 1
 					fi
 					;;
-				"x")
+				x|X)
 					return 1
 					;;
 				*)
@@ -233,7 +232,6 @@ DO_NEWPROJECT() {
 				"modem.bin")
 					echo "This file usually contains low-level binary code responsible for mobile connection. Say no if you're unsure"
 					;;
-				*)
 			esac
 			echo
 			read -p "Include? [y/n]: " CHOICE
@@ -397,7 +395,6 @@ REBUILD_UPDATER-SCRIPT() {
 				STYLE="PREPEND"
 				shift 1
 				;;
-			*)
 		esac
 	done
 	if [ $MODE == "DEL" ]; then
@@ -688,6 +685,16 @@ BUSYBOX() {
 	BUILD_UPDATER_SCRIPT
 }
 
+ADB() {
+	if [ $(grep "ro.adb.secure=1" $ACTIVE_PROJECT/kernel/ramdisk/default.prop | wc -l) -gt 0 ]; then
+		sed -i 's/ro.adb.secure=1/ro.adb.secure=0/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
+		sed -i 's/ro.secure=1/ro.secure=0/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
+	else
+		sed -i 's/ro.adb.secure=0/ro.adb.secure=1/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
+		sed -i 's/ro.secure=0/ro.secure=1/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
+	fi
+}
+
 # Main
 while :; do
 	clear
@@ -758,62 +765,90 @@ while :; do
 	else
 		echo "[YES]"
 	fi
+	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
+		echo
+		echo "-=-=-=-="
+		echo '|Kernel|'
+		echo "-=-=-=-="
+		echo -n "ADB? "
+		if [ $(grep "ro.adb.secure=0" $ACTIVE_PROJECT/kernel/ramdisk/default.prop | wc -l) -gt 0 ]; then
+			echo "[INSECURE]"
+		else
+			echo "[SECURE]"
+		fi
+		echo -n "Kernel Init.d? "
+		if [ $(grep "sysinit" $ACTIVE_PROJECT/kernel/ramdisk/init.rc | wc -l) -gt 0 ]; then
+			echo "[YES]"
+		else
+			echo "[NO]"
+		fi
+	fi
 	echo
 	echo "-------------------------------------------------------------------------------"
-	echo "a - Change architecture (arm/x86)"
+	echo "a	- Change architecture (arm/x86)"
 	echo
-	echo "adi - Enable/Disable ArchiDroid indepdendent Init.d (software debuggerd hook)"
-	echo "i - Add Init.d Support (DONT TOUCH YET) (hardware kernel hook)"
+	echo "adi	- Enable/Disable ArchiDroid indepdendent Init.d (software debuggerd hook)"
 	echo
-	echo "d - Deodex Everything"
-	echo "z - Zipalign Everything"
-	echo "r - Enable/Disable Root"
-	echo "b - Enable/Disable Busybox"
+	echo "d	- Deodex Everything"
+	echo "z	- Zipalign Everything"
+	echo "r	- Enable/Disable Root"
+	echo "b	- Enable/Disable Busybox"
 	echo
-	echo "ku - Unpack kernel"
-	echo "kr - Repack kernel"
-	echo "ka - Abort repacking of kernel"
+	echo "-=-=-=-="
+	echo '|Kernel|'
+	echo "-=-=-=-="
+	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
+		echo "kr	- Repack kernel"
+		echo "ka	- Abort repacking of kernel (lose all kernel changes selected below)"
+		echo "i	- Add Init.d Support (Bugged?) (hardware kernel hook)"
+		echo "adb	- Enable/Disable insecure ADB"
+	else
+		echo "ku	- Unpack kernel (this enables more options!)"
+	fi
 	echo
-	echo "bb - Build ROM"
-	echo "x - Exit"
+	echo "bb	- Build ROM"
+	echo "x	- Exit"
 	echo
 	echo -n "CHOICE: "
 	read CHOICE
 	case "$CHOICE" in
-		"x")
+		x|X)
 			exit 0
 			;;
-		"a")
+		a|A)
 			CHANGE_ARCHITECTURE
 			;;
-		"adi")
+		adi|ADI)
 			ARCHIDROID_INITD
 			;;
-		"d")
+		d|D)
 			DEODEX
 			;;
-		"z")
+		z|Z)
 			ZIPALIGN
 			;;
-		"r")
+		r|R)
 			ROOT
 			;;
-		"b")
+		b|B)
 			BUSYBOX
 			;;
-		"i")
+		i|I)
 			INITD
 			;;
-		"ku")
+		adb|ADB)
+			ADB
+			;;
+		ku|KU)
 			KERNEL_EXTRACT
 			;;
-		"kr")
+		kr|KR)
 			KERNEL_REPACK
 			;;
-		"ka")
+		ka|KA)
 			KERNEL_ABORT
 			;;
-		"bb")
+		bb|BB)
 			if ($ALLFINE); then
 				BUILD
 			else
@@ -821,6 +856,5 @@ while :; do
 				PRESS_ENTER
 			fi
 			;;
-		*)
 	esac
 done
