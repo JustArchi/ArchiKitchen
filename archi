@@ -593,6 +593,14 @@ BUILD() {
 DEODEX() {
 	local API=$(grep "ro.build.version.sdk" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
 	echo "Detected API level $API"
+	echo "Usually you don't want to change this value"
+	read -p "Change it? [y/n]: " CHOICE
+	case "$CHOICE" in
+		"y")
+			read -p "Your selected API level: " API
+			;;
+		*)
+	esac
 	for f in $(find $ACTIVE_PROJECT -type f -iname "*.odex"); do
 		local FILE=$(basename $f)
 		local FILEDIR=$(dirname $f)
