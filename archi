@@ -571,7 +571,7 @@ BUILD() {
 		*)
 	esac
 	cd $ACTIVE_PROJECT
-	zip -ry $COMPLEVEL $ACTIVE_PROJECT.zip . -x META-INF/com/google/android/updater-script-HEAD META-INF/com/google/android/updater-script-SYMLINKS META-INF/com/google/android/updater-script-PERMISSIONS META-INF/com/google/android/updater-script-TAIL META-INF/com/google/android/updater-script-KERNEL
+	zip -ry $COMPLEVEL $ACTIVE_PROJECT.zip . -x META-INF/com/google/android/updater-script-HEAD META-INF/com/google/android/updater-script-SYMLINKS META-INF/com/google/android/updater-script-PERMISSIONS META-INF/com/google/android/updater-script-TAIL META-INF/com/google/android/updater-script-KERNEL META-INF/com/google/android/updater-script-MODEM
 	cd ..
 	mkdir -p OUTPUT_ZIP
 	mv -f $ACTIVE_PROJECT/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$ACTIVE_PROJECT.zip
