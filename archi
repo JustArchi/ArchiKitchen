@@ -288,7 +288,7 @@ CHECK_KERNEL() {
 	if [ ! -e $ACTIVE_PROJECT/META-INF/com/google/android/updater-script ] || ([ $(grep -i "boot.img" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ] && [ $(grep -i "zImage" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ]); then
 		echo "WARNING! No kernel path found in current updater-script"
 		echo "This is typical when you're converting image-based rom to zip-based rom"
-		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
+		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
 		echo "Detected ROM model: $MODEL"
 		echo "Make sure it's proper model for your device!"
 		PRESS_ENTER
