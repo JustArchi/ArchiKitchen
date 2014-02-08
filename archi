@@ -433,6 +433,31 @@ BUILD_UPDATER_SCRIPT() {
 	sed -i '/^$/d' $ACTIVE_PROJECT/META-INF/com/google/android/updater-script # This removes empty lines added above
 }
 
+FIX_PERMISSIONS() {
+	cp $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-PERMISSIONS $ACTIVE_PROJECT/updater-script-TEMP
+	rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+	for perm in $(cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-PERMISSIONS | cut -d'"' -f2); do
+		if [ -z "$perm" ]; then
+			continue
+		elif [ ! -e $ACTIVE_PROJECT$perm ]; then
+			echo $perm >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
+			grep -Ev "$perm" $ACTIVE_PROJECT/updater-script-TEMP > $ACTIVE_PROJECT/updater-script-TEMP2
+			mv -f $ACTIVE_PROJECT/updater-script-TEMP2 $ACTIVE_PROJECT/updater-script-TEMP
+		fi
+	done
+	if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
+		echo "No invalid permissions found, your updater-script is clean!"
+	else
+		echo "OK, permissions for following files have been removed from your updater-script: "
+		echo "-=-= REMOVED PERMISSIONS START =-=-"
+		cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
+		echo "-=-= REMOVED PERMISSIONS EOF =-=-"
+		rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+	fi
+	PRESS_ENTER
+	mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-PERMISSIONS
+}
+
 CLEAN_EVERYTHING() {
 	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL" "updater-script-MODEM"; do
 		rm -f $ACTIVE_PROJECT/META-INF/com/google/android/$i
@@ -533,6 +558,14 @@ INITD() {
 }
 
 BUILD() {
+	echo "Right now you're using generic list of permissions based on multiple devices"
+	echo "It's usually a good idea to remove invalid permissions, by invalid I mean permissions to non-existent files or folders"
+	read -p "Do you want to remove invalid permissions? [y/n]: " CHOICE
+	case "$CHOICE" in
+		n|N) ;;
+		*)
+			FIX_PERMISSIONS
+	esac
 	BUILD_UPDATER_SCRIPT
 	echo "Sometimes kitchen may produce an incorrect updater-script file, that's why you're asked to review updater-script and eventually fix it if needed BEFORE building ROM"
 	echo "Updater-script is based on so-called 'segments' available in the same directory - META-INF/com/google/android"
