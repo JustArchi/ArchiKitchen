@@ -16,7 +16,7 @@
 
 # Initial variables
 VERSION="1.0"
-TOOLS=(basename dirname clear gcc java perl sed wget od wc cpio zip unzip tar)
+TOOLS=(whoami basename dirname clear gcc java perl sed wget od wc cpio zip unzip tar)
 ACTIVE_PROJECT=""
 MODEMINCLUDED=false
 ARCH="arm"
@@ -269,11 +269,11 @@ DO_SIMG2IMG_ALL() {
 			"cache")
 				if [ -e /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip ]; then
 					echo "Found common sec_csc.zip file, this is CSC provided by Samsung, including it"
-					unzip -q /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip -d $ACTIVE_PROJECT/
+					ROOT_EXECUTE "unzip -q /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip -d $ACTIVE_PROJECT/"
 				fi
 				;;
 			*)
-				cp -R /tmp/ArchiKitchenLOOP/* $ACTIVE_PROJECT/$IMGNAME/
+				ROOT_EXECUTE "cp -R /tmp/ArchiKitchenLOOP/* $ACTIVE_PROJECT/$IMGNAME/"
 		esac
 		ROOT_EXECUTE "umount /tmp/ArchiKitchenLOOP"
 		rm -f $f.simg2img
