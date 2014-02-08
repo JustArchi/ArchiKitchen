@@ -21,6 +21,7 @@ ACTIVE_PROJECT=""
 MODEMINCLUDED=false
 ARCH="arm"
 ALIGN=4
+CUSER=$(whoami)
 
 clear
 echo -n "Please wait"
@@ -278,6 +279,7 @@ DO_SIMG2IMG_ALL() {
 		ROOT_EXECUTE "umount /tmp/ArchiKitchenLOOP"
 		rm -f $f.simg2img
 	done
+	ROOT_EXECUTE "chown -hR $CUSER.$CUSER $ACTIVE_PROJECT"
 }
 
 CHECK_KERNEL() {
