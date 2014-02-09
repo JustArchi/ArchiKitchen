@@ -1,0 +1,8 @@
+This file should contain current versions of tools used by the kitchen
+Also, for a reference where to search for updates
+
+[Bak]smali 2.0.3 - https://bitbucket.org/JesusFreke/smali/downloads
+Busybox 1.22.1 - https://play.google.com/store/apps/details?id=stericson.busybox
+Kernel repack tools 9260ca90b5 - https://github.com/osm0sis/mkbootimg
+SuperSU 1.93 - http://download.chainfire.eu/supersu
+Zipalign R22.3 - http://developer.android.com/sdk/index.html
