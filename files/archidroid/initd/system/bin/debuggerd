@@ -6,12 +6,15 @@
 
 # ArchiDroid Fallback call, if needed
 if [ ! -e /dev/HAS_INIT ]; then
+	sleep 5 # Give kernel extra time to execute init.d
+fi
+if [ ! -e /dev/HAS_INIT ]; then
 	touch /dev/HAS_INIT
 
 	# Act as indepdendent init.d execute
-	# Also, ignore permissions
+	# Don't ignore permissions and handle all services, including non-shell binaries
 	for f in $(find /system/etc/init.d -type f); do
-		sh $f &
+		$f &
 	done
 fi
 
