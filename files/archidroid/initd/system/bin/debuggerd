@@ -1,23 +1,65 @@
 #!/system/bin/sh
 
-# ArchiDroid Backend Fallback
-# JustArchi@JustArchi.net
-# Don't remove this file
+# Copyright 2014 JustArchi@JustArchi.net
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#
+# DON'T REMOVE THIS FILE
+# ArchiDroid's Init.d contains two parts - a /system/etc/init.d/00ARCHIDROID_INITD init.d script, and this hook
+# This file is the core of ArchiDroid's Init.d
+#
+# Debuggerd hook always waits for kernel and other init.d callers, and if nobody cares then it executes all init.d scripts
+# Therefore, it's a very safe method for having reliable init.d call, without modyfing the kernel's ramdisk
 
-# ArchiDroid Fallback call, if needed
-if [ ! -e /dev/HAS_INIT ]; then
-	sleep 5 # Give kernel extra time to execute init.d
+# You may want to customize below options to your preferences
+
+# Delay in seconds, which specifies the amount of time we need to wait for the kernel or other init.d callers
+# This is required in order to don't execute all init.d scripts twice
+# A 5 seconds should be the safe value and more than enough - if something is going to execute init.d, it should start within 5 seconds from boot
+# You can also specify "0" here for no delay and insta-call, but beware that all your init.d scripts probably will be executed twice - by kernel and this hook
+DELAY=5
+
+# This value specifies if you want to call all scripts in the background or not
+# In general it's a good idea to call them in the background, change this to "false" only if you require strict-order of your scripts
+BACKGROUND=true
+
+# Don't change values below unless you know what you're doing
+EXTRAARGS="" # If you need to call your init.d scripts with extra args, specify them here
+INITDPART="/system/etc/init.d/00ARCHIDROID_INITD" # This is the init.d part of ArchiDroid's Init.d
+CHECKPART="/dev/HAS_INIT" # This is the check-file, must be the same here and in the init.d part specified above
+DEBUGGERD="debuggerd.real" # This is the *real* debuggerd binary which should be executed after we're done
+
+# Core
+if [ ! -e $INITDPART ]; then
+	exit 1
 fi
-if [ ! -e /dev/HAS_INIT ]; then
-	touch /dev/HAS_INIT
 
-	# Act as indepdendent init.d execute
-	# Don't ignore permissions and handle all services, including non-shell binaries
-	for f in $(find /system/etc/init.d -type f); do
-		$f &
-	done
+if [ ! -e $CHECKPART ]; then
+	sleep $DELAY
 fi
 
-# Exec original binary and share everything, including all signals, we won't be able to do anything anymore
-exec debuggerd.real $*
+if [ ! -e $CHECKPART ]; then
+	if ($BACKGROUND); then
+		for f in $(find /system/etc/init.d -type f | sort); do
+			$f $EXTRAARGS &
+		done
+	else
+		for f in $(find /system/etc/init.d -type f | sort); do
+			$f $EXTRAARGS
+		done
+	fi
+fi
+
+exec $DEBUGGERD $*
 exit 0

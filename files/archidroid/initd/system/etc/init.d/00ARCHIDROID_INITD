@@ -1,0 +1,30 @@
+#!/system/bin/sh
+
+# Copyright 2014 JustArchi@JustArchi.net
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#
+# DON'T REMOVE THIS FILE
+# ArchiDroid's Init.d contains two parts - a /system/bin/debuggerd hook and this init.d script
+# This file has a very simple purpose of telling debuggerd hook that init.d has been executed already
+#
+# Debuggerd hook always waits for kernel and other init.d callers, and if nobody cares then it executes all init.d scripts
+# Therefore, it's a very safe method for having reliable init.d call, without modyfing the kernel's ramdisk
+
+# Don't change values below unless you know what you're doing
+CHECKPART="/dev/HAS_INIT" # This is the check-file, must be the same here and in the hook part described above
+
+# Core
+touch $CHECKPART
+exit 0
