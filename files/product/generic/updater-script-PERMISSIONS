@@ -56,7 +56,7 @@ set_metadata("/system/bin/mtpd", "uid", 0, "gid", 2000, "mode", 0755, "capabilit
 set_metadata("/system/bin/netcfg", "uid", 0, "gid", 3003, "mode", 02750, "capabilities", 0x0, "selabel", "u:object_r:system_file:s0");
 set_metadata("/system/bin/netd", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:netd_exec:s0");
 set_metadata("/system/bin/npsmobex", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:mobexdaemon_exec:s0");
-set_metadata("/system/bin/ping", "uid", 0, "gid", 0, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:ping_exec:s0");
+set_metadata("/system/bin/ping", "uid", 0, "gid", 0, "mode", 02755, "capabilities", 0x0, "selabel", "u:object_r:ping_exec:s0");
 set_metadata("/system/bin/pppd", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:ppp_exec:s0");
 set_metadata("/system/bin/prepare_param.sh", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:prepare_param_sh_file:s0");
 set_metadata("/system/bin/qcks", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:qcks_exec:s0");
@@ -68,7 +68,7 @@ set_metadata("/system/bin/racoon", "uid", 0, "gid", 2000, "mode", 0755, "capabil
 set_metadata("/system/bin/rfs_access", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:rfs_access_exec:s0");
 set_metadata("/system/bin/rild", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:rild_exec:s0");
 set_metadata("/system/bin/rmt_storage", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:rmt_storage_exec:s0");
-set_metadata("/system/bin/run-as", "uid", 0, "gid", 2000, "mode", 0750, "capabilities", 0x0, "selabel", "u:object_r:runas_exec:s0");
+set_metadata("/system/bin/run-as", "uid", 0, "gid", 2000, "mode", 06750, "capabilities", 0x0, "selabel", "u:object_r:runas_exec:s0");
 set_metadata("/system/bin/samsungpowersoundplay", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:samsungpowersoundplay_exec:s0");
 set_metadata("/system/bin/scranton_RD", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:playready_exec:s0");
 set_metadata("/system/bin/sdcard", "uid", 0, "gid", 2000, "mode", 0755, "capabilities", 0x0, "selabel", "u:object_r:sdcardd_exec:s0");
