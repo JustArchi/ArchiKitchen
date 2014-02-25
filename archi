@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set +e
+
 # Initial variables
 VERSION="1.0"
 TOOLS=(whoami basename dirname clear gcc java perl sed wget od wc cpio zip unzip tar)
@@ -22,6 +24,14 @@ MODEMINCLUDED=false
 ARCH="arm"
 ALIGN=4
 CUSER=$(whoami)
+
+META_INF="META-INF/com/google/android"
+UPDATER_SCRIPT_HEAD="updater-script-00_HEAD"
+UPDATER_SCRIPT_SYMLINKS="updater-script-10_SYMLINKS"
+UPDATER_SCRIPT_PERMISSIONS="updater-script-20_PERMISSIONS"
+UPDATER_SCRIPT_KERNEL="updater-script-90_KERNEL"
+UPDATER_SCRIPT_MODEM="updater-script-91_MODEM"
+UPDATER_SCRIPT_TAIL="updater-script-99_TAIL"
 
 clear
 echo -n "Please wait"
@@ -48,6 +58,7 @@ PRESS_ENTER() {
 	read -p "Press [Enter] key to continue..."
 }
 
+# Executes commands given in $@ as root
 ROOT_EXECUTE() {
 	if [ $(whoami) == "root" ]; then
 		$@
@@ -61,6 +72,7 @@ ROOT_EXECUTE() {
 	fi
 }
 
+# Sets ACTIVE_PROJECT
 DO_SETPROJECT() {
 	echo
 	echo "You currently don't have any active projects"
@@ -112,6 +124,7 @@ DO_SETPROJECT() {
 	return 0
 }
 
+# Creates new project
 DO_NEWPROJECT() {
 	clear
 	echo "You can create a new bare bones project or a project based on a base drop"
@@ -257,6 +270,7 @@ DO_NEWPROJECT() {
 	BUILD_UPDATER_SCRIPT
 }
 
+# Converts all stock images to mountable linux ones
 DO_SIMG2IMG_ALL() {
 	for f in $(find $ACTIVE_PROJECT -maxdepth 1 -type f -iname "*.ext4"); do
 		echo "Converting and mounting $(basename $f)"
@@ -282,8 +296,9 @@ DO_SIMG2IMG_ALL() {
 	ROOT_EXECUTE "chown -hR $CUSER.$CUSER $ACTIVE_PROJECT"
 }
 
+# Sets up kernel
 CHECK_KERNEL() {
-	if [ ! -e $ACTIVE_PROJECT/META-INF/com/google/android/updater-script ] || ([ $(grep -i "boot.img" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ] && [ $(grep -i "zImage" $ACTIVE_PROJECT/META-INF/com/google/android/updater-script | wc -l) -eq 0 ]); then
+	if [ ! -e $ACTIVE_PROJECT/$META_INF/updater-script ] || ([ $(grep -i "boot.img" $ACTIVE_PROJECT/$META_INF/updater-script | wc -l) -eq 0 ] && [ $(grep -i "zImage" $ACTIVE_PROJECT/$META_INF/updater-script | wc -l) -eq 0 ]); then
 		echo "WARNING! No kernel path found in current updater-script"
 		echo "This is typical when you're converting image-based rom to zip-based rom"
 		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
@@ -294,21 +309,22 @@ CHECK_KERNEL() {
 			KERNELPATH=$(cat files/product/$MODEL/KERNEL)
 		else
 			echo "This model does not yet exist in our database"
-			echo "Please write your kernel path manualy. Example of kernel path from GT-I9300: /dev/block/mmcblk0p5"
+			echo "Please write your kernel path manually. Example of kernel path from GT-I9300: /dev/block/mmcblk0p5"
 			echo -n "Kernel path for your model: "
 			read KERNELPATH
 		fi
 		echo "Based on model above and our little database, your kernel path should be $KERNELPATH"
 		echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
 		PRESS_ENTER
-		echo "\"$KERNELPATH\");" >> $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-KERNEL
+		echo "\"$KERNELPATH\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL
 		echo "OK, This is the final effect:"
-		cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-KERNEL
-		echo "Make sure that path and syntax is correct, if not, modify it manualy through file $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-KERNEL BEFORE you proceed to the next step"
+		cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL
+		echo "Make sure that path and syntax is correct, if not, modify it manually through file $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL BEFORE you proceed to the next step"
 		PRESS_ENTER
 	fi
 }
 
+# Sets up modem
 CHECK_MODEM() {
 	if [ -e $ACTIVE_PROJECT/modem.bin ]; then
 		echo "Modem.bin file found"
@@ -320,22 +336,23 @@ CHECK_MODEM() {
 			MODEMPATH=$(cat files/product/$MODEL/MODEM)
 		else
 			echo "This model does not yet exist in our database"
-			echo "Please write your modem path manualy. Example of modem path from GT-I9300: /dev/block/mmcblk0p7"
+			echo "Please write your modem path manually. Example of modem path from GT-I9300: /dev/block/mmcblk0p7"
 			echo -n "Modem path for your model: "
 			read MODEMPATH
 		fi
 		echo "Based on model above and our little database, your modem path should be $MODEMPATH"
 		echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
 		PRESS_ENTER
-		echo "\"$MODEMPATH\");" >> $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM
+		echo "\"$MODEMPATH\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
 		echo "OK, This is the final effect:"
-		cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM
-		echo "Make sure that path and syntax is correct, if not, modify it manualy through file $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM BEFORE you proceed to the next step"
+		cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
+		echo "Make sure that path and syntax is correct, if not, modify it manually through file $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM BEFORE you proceed to the next step"
 		PRESS_ENTER
 		MODEMINCLUDED=true
 	fi
 }
 
+# Compiles simg2img, if we don't have it yet
 DO_MAKESURE_WEHAVE_SIMG2IMG() {
 	if [ ! -e temp/simg2img ]; then
 		mkdir -p temp
@@ -343,100 +360,70 @@ DO_MAKESURE_WEHAVE_SIMG2IMG() {
 	fi
 }
 
+# Creates META-INF, if not yet available
 DO_MAKESURE_WEHAVE_METAINF() {
-	mkdir -p $ACTIVE_PROJECT/META-INF/com/google/android
-	cp files/product/generic/update-binary $ACTIVE_PROJECT/META-INF/com/google/android/update-binary
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL" "updater-script-MODEM"; do
-		cp "files/product/generic/$i" "$ACTIVE_PROJECT/META-INF/com/google/android/$i"
+	mkdir -p $ACTIVE_PROJECT/$META_INF
+	cp files/product/generic/update-binary $ACTIVE_PROJECT/$META_INF/update-binary
+	for UPDATER_SCRIPT in files/product/generic/updater-scripts/*; do
+		cp "$UPDATER_SCRIPT" "$ACTIVE_PROJECT/$META_INF/"
 	done
 }
 
-REBUILD_UPDATER-SCRIPT() {
-	local MODE=""
-	local STYLE=""
+# Adds updater-scripts from $1 to our ACTIVE_PROJECT
+UPDATER_SCRIPT_ADD() {
+	local FOLDER="$1"
 	local FILE=""
-	for arg in $@; do
-		case "$arg" in
-			"ADD")
-				MODE="ADD"
-				shift 1
-				;;
-			"DEL")
-				MODE="DEL"
-				shift 1
-				;;
-			"HEAD")
-				FILE="updater-script-HEAD"
-				shift 1
-				;;
-			"SYMLINK")
-				FILE="updater-script-SYMLINKS"
-				shift 1
-				;;
-			"PERMISSIONS")
-				FILE="updater-script-PERMISSIONS"
-				shift 1
-				;;
-			"TAIL")
-				FILE="updater-script-TAIL"
-				shift 1
-				;;
-			"KERNEL")
-				FILE="updater-script-KERNEL"
-				shift 1
-				;;
-			"MODEM")
-				FILE="updater-script-MODEM"
-				shift 1
-				;;
-			"APPEND")
-				STYLE="APPEND"
-				shift 1
-				;;
-			"PREPEND")
-				STYLE="PREPEND"
-				shift 1
-				;;
-		esac
+	for UPDATER_SCRIPT in $FOLDER/updater-script-*; do
+		FILE=$(basename $UPDATER_SCRIPT)
+		echo "" >> $ACTIVE_PROJECT/$META_INF/$FILE # This is to ensure that we have a new line BEFORE appending"
+		cat "$UPDATER_SCRIPT" >> $ACTIVE_PROJECT/$META_INF/$FILE
+		echo "" >> $ACTIVE_PROJECT/$META_INF/$FILE # This is to ensure that we have a new line AFTER appending"
+		sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/$FILE # This removes safety lines added above
 	done
-	if [ $MODE == "DEL" ]; then
-		#TODO1: We're handling it through so-called "primary key" but this needs to be implemented in a better way, as it's dangerous
-		sed -i "/$@/d" $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
-		shift 1
-	elif [ $MODE == "ADD" ]; then
-		if [ $STYLE == "APPEND" ]; then
-			echo "" >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
-			cat "$@" >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
-			echo "" >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
-		elif [ $STYLE == "PREPEND" ]; then
-			mv $ACTIVE_PROJECT/META-INF/com/google/android/$FILE $ACTIVE_PROJECT/META-INF/com/google/android/$FILE.tmp
-			cat "$@" > $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
-			echo "" >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
-			cat $ACTIVE_PROJECT/META-INF/com/google/android/$FILE.tmp >> $ACTIVE_PROJECT/META-INF/com/google/android/$FILE
-			rm -f $ACTIVE_PROJECT/META-INF/com/google/android/$FILE.tmp
-		fi
-	fi
-	sed -i '/^$/d' $ACTIVE_PROJECT/META-INF/com/google/android/$FILE # This removes empty lines added above
-	#BUILD_UPDATER_SCRIPT # We handle that through scripts itself, as it causes up to 4x non-needed overhead
 }
 
+# Removes updater-scripts from $1 from our ACTIVE_PROJECT
+UPDATER_SCRIPT_DEL() {
+	local UNIQUECHAR="!"
+	local FOLDER="$1"
+	local FILE=""
+	local CMD=""
+	for UPDATER_SCRIPT in $FOLDER/updater-script-*; do
+		# TODO: I know that this is slow and inefficient way, however at least I can prove that it's stable and secure
+		# If anybody manages to delete lines from $ACTIVE_PROJECT/$META_INF/$FILE, which exist in $UPDATER_SCRIPT, please contribute! :)
+		# Unfortunately I failed using sed, so I'm out of better ideas :(
+		FILE=$(basename $UPDATER_SCRIPT)
+		echo -n "" > "$ACTIVE_PROJECT/$FILE"
+		cat "$ACTIVE_PROJECT/$META_INF/$FILE" | while read line; do
+			if [ $(grep -q "$line" "$UPDATER_SCRIPT"; echo $?) -eq 1 ]; then
+				echo "$line" >> "$ACTIVE_PROJECT/$FILE"
+			fi
+		done
+		mv -f "$ACTIVE_PROJECT/$FILE" "$ACTIVE_PROJECT/$META_INF/$FILE"
+	done
+}
+
+# Builds final updater-script from our segments
 BUILD_UPDATER_SCRIPT() {
-	echo -n "" > $ACTIVE_PROJECT/META-INF/com/google/android/updater-script
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL"; do
-		cat "$ACTIVE_PROJECT/META-INF/com/google/android/$i" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
-		echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
+	echo -n "" > $ACTIVE_PROJECT/$META_INF/updater-script
+	for UPDATER_SCRIPT in $ACTIVE_PROJECT/$META_INF/updater-script-*; do
+		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line BEFORE appending"
+		cat "$UPDATER_SCRIPT" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
+		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line AFTER appending"
 	done
 	if ($MODEMINCLUDED); then
-		cat "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script-MODEM" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
-		echo "" >> "$ACTIVE_PROJECT/META-INF/com/google/android/updater-script"
+		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line BEFORE appending"
+		cat "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
+		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line AFTER appending"
 	fi
-	sed -i '/^$/d' $ACTIVE_PROJECT/META-INF/com/google/android/updater-script # This removes empty lines added above
+	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/updater-script # This removes safety lines added above
 }
 
+# Removes invalid generic permissions
 FIX_PERMISSIONS() {
-	cp $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-PERMISSIONS $ACTIVE_PROJECT/updater-script-TEMP
+	cp $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS $ACTIVE_PROJECT/updater-script-TEMP
 	rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-	for perm in $(cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-PERMISSIONS | cut -d'"' -f2); do
+	for perm in $(cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS | cut -d'"' -f2); do
 		if [ -z "$perm" ]; then
 			continue
 		elif [ ! -e $ACTIVE_PROJECT$perm ]; then
@@ -455,15 +442,10 @@ FIX_PERMISSIONS() {
 		rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
 	fi
 	PRESS_ENTER
-	mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/META-INF/com/google/android/updater-script-PERMISSIONS
+	mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS
 }
 
-CLEAN_EVERYTHING() {
-	for i in "updater-script-HEAD" "updater-script-SYMLINKS" "updater-script-PERMISSIONS" "updater-script-TAIL" "updater-script-KERNEL" "updater-script-MODEM"; do
-		rm -f $ACTIVE_PROJECT/META-INF/com/google/android/$i
-	done
-}
-
+# Changes architecture, this covers only utilities available to both of them
 CHANGE_ARCHITECTURE() {
 	case "$ARCH" in
 		"arm")
@@ -477,6 +459,7 @@ CHANGE_ARCHITECTURE() {
 	esac
 }
 
+# Extracts the kernel
 KERNEL_EXTRACT() {
 	if [ ! -e $ACTIVE_PROJECT/kernel ]; then
 		mkdir -p temp
@@ -512,6 +495,7 @@ KERNEL_EXTRACT() {
 	fi
 }
 
+# Repacks the kernel from previously extracted one
 KERNEL_REPACK() {
 	if [ -e $ACTIVE_PROJECT/kernel ]; then
 		if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
@@ -527,20 +511,26 @@ KERNEL_REPACK() {
 	fi
 }
 
+# Aborts kernel repacking
 KERNEL_ABORT() {
 	rm -rf $ACTIVE_PROJECT/kernel
 	rm -f $ACTIVE_PROJECT/temp.img
 }
 
+# Adds ArchiDroid's Init.d
 ARCHIDROID_INITD() {
 	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
 		mv -f $ACTIVE_PROJECT/system/bin/debuggerd $ACTIVE_PROJECT/system/bin/debuggerd.real
 		cp -R files/archidroid/initd/system/* $ACTIVE_PROJECT/system/
+		UPDATER_SCRIPT_ADD "files/archidroid/initd/updater-scripts"
 	else
 		mv -f $ACTIVE_PROJECT/system/bin/debuggerd.real $ACTIVE_PROJECT/system/bin/debuggerd
+		UPDATER_SCRIPT_DEL "files/archidroid/initd/updater-scripts"
 	fi
+	BUILD_UPDATER_SCRIPT
 }
 
+# Adds Init.d
 INITD() {
 	KERNEL_EXTRACT
 	if [ -e kernel/ramdisk/init.rc ]; then
@@ -548,16 +538,17 @@ INITD() {
 		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' kernel/ramdisk/init.rc
 		KERNEL_REPACK
 		cp -R files/initd/system/* $ACTIVE_PROJECT/system/
-		REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/initd/updater-script-PERMISSIONS"
+		UPDATER_SCRIPT_ADD "files/initd/updater-scripts"
 	else
 		echo "ERROR, no init.rc found?!"
 		rm -rf kernel
+		PRESS_ENTER
 		return 1
 	fi
-	PRESS_ENTER
 }
 
 BUILD() {
+	local IGNOREDFILES="$META_INF/$UPDATER_SCRIPT_HEAD $META_INF/$UPDATER_SCRIPT_SYMLINKS $META_INF/$UPDATER_SCRIPT_PERMISSIONS $META_INF/$UPDATER_SCRIPT_TAIL $META_INF/$UPDATER_SCRIPT_KERNEL $META_INF/$UPDATER_SCRIPT_MODEM"
 	echo "Right now you're using generic list of permissions based on multiple devices"
 	echo "It's usually a good idea to remove invalid permissions, by invalid I mean permissions to non-existent files or folders"
 	read -p "Do you want to remove invalid permissions? [y/n]: " CHOICE
@@ -568,11 +559,11 @@ BUILD() {
 	esac
 	BUILD_UPDATER_SCRIPT
 	echo "Sometimes kitchen may produce an incorrect updater-script file, that's why you're asked to review updater-script and eventually fix it if needed BEFORE building ROM"
-	echo "Updater-script is based on so-called 'segments' available in the same directory - META-INF/com/google/android"
+	echo "Updater-script is based on so-called 'segments' available in the same directory - $META_INF"
 	echo "Are you ready?"
 	PRESS_ENTER
 	echo "-=-= UPDATER-SCRIPT START =-=-"
-	cat $ACTIVE_PROJECT/META-INF/com/google/android/updater-script
+	cat $ACTIVE_PROJECT/$META_INF/updater-script
 	echo "-=-= UPDATER-SCRIPT EOF =-=-"
 	read -p "Are you REALLY sure that above updater-script is correct? ESPECIALLY block-based paths? [y/n]: " CHOICE
 	case "$CHOICE" in
@@ -593,7 +584,7 @@ BUILD() {
 		[0-9]) COMPLEVEL="$CHOICE"
 	esac
 	cd $ACTIVE_PROJECT
-	zip -ry -$COMPLEVEL $ACTIVE_PROJECT.zip . -x META-INF/com/google/android/updater-script-HEAD META-INF/com/google/android/updater-script-SYMLINKS META-INF/com/google/android/updater-script-PERMISSIONS META-INF/com/google/android/updater-script-TAIL META-INF/com/google/android/updater-script-KERNEL META-INF/com/google/android/updater-script-MODEM
+	zip -ry -$COMPLEVEL $ACTIVE_PROJECT.zip . -x $IGNOREDFILES
 	cd ..
 	mkdir -p OUTPUT_ZIP
 	mv -f $ACTIVE_PROJECT/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$ACTIVE_PROJECT.zip
@@ -692,7 +683,7 @@ ROOT() {
 		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/xbin/daemonsu
 		mkdir -p $ACTIVE_PROJECT/system/bin/.ext
 		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/bin/.ext/.su
-		REBUILD_UPDATER-SCRIPT "ADD" "PERMISSIONS" "APPEND" "files/root/updater-script-PERMISSIONS"
+		UPDATER_SCRIPT_ADD "files/root/updater-scripts"
 	else
 		rm -f $ACTIVE_PROJECT/system/app/Superuser.apk
 		rm -f $ACTIVE_PROJECT/system/xbin/su
@@ -700,7 +691,7 @@ ROOT() {
 		rm -f $ACTIVE_PROJECT/system/bin/.ext/.su
 		rm -f $ACTIVE_PROJECT/system/etc/init.d/99SuperSUDaemon
 		rm -f $ACTIVE_PROJECT/system/etc/.installed_su_daemon
-		REBUILD_UPDATER-SCRIPT "DEL" "PERMISSIONS" "u:object_r:su_exec:s0" #TODO1
+		UPDATER_SCRIPT_DEL "files/root/updater-scripts"
 	fi
 	BUILD_UPDATER_SCRIPT
 }
@@ -709,12 +700,10 @@ BUSYBOX() {
 	if [ ! -e $ACTIVE_PROJECT/system/xbin/busybox ]; then
 		mkdir -p $ACTIVE_PROJECT/system/xbin
 		cp files/busybox/busybox $ACTIVE_PROJECT/system/xbin/busybox
-		REBUILD_UPDATER-SCRIPT "ADD" "SYMLINK" "APPEND" "files/busybox/updater-script-SYMLINKS"
-		REBUILD_UPDATER-SCRIPT "ADD" "TAIL" "PREPEND" "files/busybox/updater-script-TAIL"
+		UPDATER_SCRIPT_ADD "files/busybox/updater-scripts"
 	else
 		rm -f $ACTIVE_PROJECT/system/xbin/busybox
-		REBUILD_UPDATER-SCRIPT "DEL" "SYMLINK" "busybox" #TODO1
-		REBUILD_UPDATER-SCRIPT "DEL" "TAIL" "busybox" #TODO1
+		UPDATER_SCRIPT_DEL "files/busybox/updater-scripts"
 	fi
 	BUILD_UPDATER_SCRIPT
 }
@@ -729,6 +718,84 @@ ADB() {
 			sed -i 's/ro.secure=0/ro.secure=1/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
 		fi
 	fi
+}
+
+###############################################################
+# ____  _____ ____  ____  _____ ____    _  _____ _____ ____   #
+#|  _ \| ____|  _ \|  _ \| ____/ ___|  / \|_   _| ____|  _ \  #
+#| | | |  _| | |_) | |_) |  _|| |     / _ \ | | |  _| | | | | #
+#| |_| | |___|  __/|  _ <| |__| |___ / ___ \| | | |___| |_| | #
+#|____/|_____|_|   |_| \_\_____\____/_/   \_\_| |_____|____/  #
+#                                                             #
+###############################################################
+REBUILD_UPDATER-SCRIPT() {
+	# DEPRECATED -> UPDATER_SCRIPT_ADD & UPDATER_SCRIPT_DEL
+	local MODE=""
+	local STYLE=""
+	local FILE=""
+	for arg in $@; do
+		case "$arg" in
+			"ADD")
+				MODE="ADD"
+				shift 1
+				;;
+			"DEL")
+				MODE="DEL"
+				shift 1
+				;;
+			"HEAD")
+				FILE="updater-script-00_HEAD"
+				shift 1
+				;;
+			"SYMLINK")
+				FILE="updater-script-10_SYMLINKS"
+				shift 1
+				;;
+			"PERMISSIONS")
+				FILE="$UPDATER_SCRIPT_PERMISSIONS"
+				shift 1
+				;;
+			"TAIL")
+				FILE="updater-script-99_TAIL"
+				shift 1
+				;;
+			"KERNEL")
+				FILE="updater-script-90_KERNEL"
+				shift 1
+				;;
+			"MODEM")
+				FILE="updater-script-91_MODEM"
+				shift 1
+				;;
+			"APPEND")
+				STYLE="APPEND"
+				shift 1
+				;;
+			"PREPEND")
+				STYLE="PREPEND"
+				shift 1
+				;;
+		esac
+	done
+	if [ $MODE == "DEL" ]; then
+		#TODO1: We're handling it through so-called "primary key" but this needs to be implemented in a better way, as it's dangerous
+		sed -i "/$@/d" $ACTIVE_PROJECT/$META_INF/$FILE
+		shift 1
+	elif [ $MODE == "ADD" ]; then
+		if [ $STYLE == "APPEND" ]; then
+			echo "" >> $ACTIVE_PROJECT/$META_INF/$FILE
+			cat "$@" >> $ACTIVE_PROJECT/$META_INF/$FILE
+			echo "" >> $ACTIVE_PROJECT/$META_INF/$FILE
+		elif [ $STYLE == "PREPEND" ]; then
+			mv $ACTIVE_PROJECT/$META_INF/$FILE $ACTIVE_PROJECT/$META_INF/$FILE.tmp
+			cat "$@" > $ACTIVE_PROJECT/$META_INF/$FILE
+			echo "" >> $ACTIVE_PROJECT/$META_INF/$FILE
+			cat $ACTIVE_PROJECT/$META_INF/$FILE.tmp >> $ACTIVE_PROJECT/$META_INF/$FILE
+			rm -f $ACTIVE_PROJECT/$META_INF/$FILE.tmp
+		fi
+	fi
+	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/$FILE # This removes empty lines added above
+	#BUILD_UPDATER_SCRIPT # We handle that through scripts itself, as it causes up to 4x non-needed overhead
 }
 
 # Main
