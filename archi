@@ -549,7 +549,7 @@ INITD() {
 }
 
 BUILD() {
-	local IGNOREDFILES="$META_INF/$UPDATER_SCRIPT_HEAD $META_INF/$UPDATER_SCRIPT_SYMLINKS $META_INF/$UPDATER_SCRIPT_PERMISSIONS $META_INF/$UPDATER_SCRIPT_EXEC $META_INF/$UPDATER_SCRIPT_TAIL $META_INF/$UPDATER_SCRIPT_KERNEL $META_INF/$UPDATER_SCRIPT_MODEM"
+	local IGNOREDFILES="$META_INF/updater-script-*"
 	echo "Right now you're using generic list of permissions based on multiple devices"
 	echo "It's usually a good idea to remove invalid permissions, by invalid I mean permissions to non-existent files or folders"
 	read -p "Do you want to remove invalid permissions? [y/n]: " CHOICE
