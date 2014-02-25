@@ -29,6 +29,7 @@ META_INF="META-INF/com/google/android"
 UPDATER_SCRIPT_HEAD="updater-script-00_HEAD"
 UPDATER_SCRIPT_SYMLINKS="updater-script-10_SYMLINKS"
 UPDATER_SCRIPT_PERMISSIONS="updater-script-20_PERMISSIONS"
+UPDATER_SCRIPT_EXEC="updater-script-80_EXEC"
 UPDATER_SCRIPT_KERNEL="updater-script-90_KERNEL"
 UPDATER_SCRIPT_MODEM="updater-script-91_MODEM"
 UPDATER_SCRIPT_TAIL="updater-script-99_TAIL"
@@ -548,7 +549,7 @@ INITD() {
 }
 
 BUILD() {
-	local IGNOREDFILES="$META_INF/$UPDATER_SCRIPT_HEAD $META_INF/$UPDATER_SCRIPT_SYMLINKS $META_INF/$UPDATER_SCRIPT_PERMISSIONS $META_INF/$UPDATER_SCRIPT_TAIL $META_INF/$UPDATER_SCRIPT_KERNEL $META_INF/$UPDATER_SCRIPT_MODEM"
+	local IGNOREDFILES="$META_INF/$UPDATER_SCRIPT_HEAD $META_INF/$UPDATER_SCRIPT_SYMLINKS $META_INF/$UPDATER_SCRIPT_PERMISSIONS $META_INF/$UPDATER_SCRIPT_EXEC $META_INF/$UPDATER_SCRIPT_TAIL $META_INF/$UPDATER_SCRIPT_KERNEL $META_INF/$UPDATER_SCRIPT_MODEM"
 	echo "Right now you're using generic list of permissions based on multiple devices"
 	echo "It's usually a good idea to remove invalid permissions, by invalid I mean permissions to non-existent files or folders"
 	read -p "Do you want to remove invalid permissions? [y/n]: " CHOICE
@@ -744,23 +745,27 @@ REBUILD_UPDATER-SCRIPT() {
 				shift 1
 				;;
 			"HEAD")
-				FILE="updater-script-00_HEAD"
+				FILE="$UPDATER_SCRIPT_HEAD"
 				shift 1
 				;;
-			"SYMLINK")
-				FILE="updater-script-10_SYMLINKS"
+			"SYMLINKS")
+				FILE="$UPDATER_SCRIPT_SYMLINKS"
 				shift 1
 				;;
 			"PERMISSIONS")
 				FILE="$UPDATER_SCRIPT_PERMISSIONS"
 				shift 1
 				;;
+			"EXEC")
+				FILE="$UPDATER_SCRIPT_EXEC"
+				shift 1
+				;;
 			"TAIL")
-				FILE="updater-script-99_TAIL"
+				FILE="$UPDATER_SCRIPT_TAIL"
 				shift 1
 				;;
 			"KERNEL")
-				FILE="updater-script-90_KERNEL"
+				FILE="$UPDATER_SCRIPT_KERNEL"
 				shift 1
 				;;
 			"MODEM")
