@@ -329,7 +329,7 @@ CHECK_KERNEL() {
 CHECK_MODEM() {
 	if [ -e $ACTIVE_PROJECT/modem.bin ]; then
 		echo "Modem.bin file found"
-		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
+		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
 		echo "Detected ROM model: $MODEL"
 		echo "Make sure it's proper model for your device!"
 		PRESS_ENTER
