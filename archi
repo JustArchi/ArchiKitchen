@@ -758,7 +758,7 @@ ROOT() {
 	if [ ! -e $ACTIVE_PROJECT/system/xbin/su ]; then
 		mkdir -p $ACTIVE_PROJECT/system/xbin
 		cp -R files/root/system/* $ACTIVE_PROJECT/system/
-		cp -R files/root/$ARCH/system/* $ACTIVE_PROJECT/system/
+		cp -R files/root/$ARCH/* $ACTIVE_PROJECT/
 		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/xbin/daemonsu
 		mkdir -p $ACTIVE_PROJECT/system/bin/.ext
 		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/bin/.ext/.su
@@ -778,7 +778,7 @@ ROOT() {
 BUSYBOX() {
 	if [ ! -e $ACTIVE_PROJECT/system/xbin/busybox ]; then
 		mkdir -p $ACTIVE_PROJECT/system/xbin
-		cp files/busybox/busybox $ACTIVE_PROJECT/system/xbin/busybox
+		cp -R files/busybox/$ARCH/* $ACTIVE_PROJECT/
 		UPDATER_SCRIPT_ADD "files/busybox/updater-scripts"
 	else
 		rm -f $ACTIVE_PROJECT/system/xbin/busybox
