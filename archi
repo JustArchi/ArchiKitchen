@@ -20,7 +20,6 @@ set +e
 VERSION="1.0"
 TOOLS=(which realpath whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
 ACTIVE_PROJECT=""
-MODEMINCLUDED=false
 ARCH="arm"
 ALIGN=4
 CUSER=$(whoami)
@@ -361,14 +360,22 @@ CHECK_MODEM() {
 			read MODEMPATH
 		fi
 		echo "Based on model above and our little database, your modem path should be $MODEMPATH"
-		echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
+		if [ "$MODEMPATH" == "NULL" ]; then
+			echo "WARNING! Your model path is NULL, which means that your device does not support flashing modem directly"
+			echo "Sorry but it's not possible to include it in your ROM"
+			rm -f $ACTIVE_PROJECT/modem.bin
+			rm -f $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
+		else
+			echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
+			PRESS_ENTER
+			echo "\"$MODEMPATH\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
+			echo "OK, This is the final effect:"
+			cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
+			echo "Make sure that path and syntax is correct, if not, modify it manually through file $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM BEFORE you proceed to the next step"
+		fi
 		PRESS_ENTER
-		echo "\"$MODEMPATH\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
-		echo "OK, This is the final effect:"
-		cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
-		echo "Make sure that path and syntax is correct, if not, modify it manually through file $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM BEFORE you proceed to the next step"
-		PRESS_ENTER
-		MODEMINCLUDED=true
+	else
+		rm -f $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
 	fi
 }
 
@@ -431,11 +438,6 @@ BUILD_UPDATER_SCRIPT() {
 		cat "$UPDATER_SCRIPT" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
 		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line AFTER appending"
 	done
-	if ($MODEMINCLUDED); then
-		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line BEFORE appending"
-		cat "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
-		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line AFTER appending"
-	fi
 	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/updater-script # This removes safety lines added above
 }
 
