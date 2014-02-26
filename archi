@@ -18,7 +18,7 @@ set +e
 
 # Initial variables
 VERSION="1.0"
-TOOLS=(whoami basename dirname clear gcc java perl sed wget od wc cpio zip unzip tar)
+TOOLS=(which realpath whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
 ACTIVE_PROJECT=""
 MODEMINCLUDED=false
 ARCH="arm"
@@ -37,21 +37,28 @@ UPDATER_SCRIPT_TAIL="updater-script-99_TAIL"
 clear
 echo -n "Please wait"
 
-# Navigate to our folder, even if user didn't execute it from the root dir
-cd $(dirname $0)
-
 # Before we begin, make sure that all our tools are available
+MISSINGTOOLS=""
 for TOOL in "${TOOLS[@]}"; do
 	echo -n "."
 	if [ -z $(which $TOOL) ]; then
-		echo "It looks like you don't have one of the required tools: $TOOL"
-		echo "This check was made through 'which' command"
-		echo "Please install missing tool and launch kitchen again"
-		exit 1
+		MISSINGTOOLS+=" $TOOL"
 	fi
 done
+echo ""
+
+if [ ! -z "$MISSINGTOOLS" ]; then
+	echo "It looks like you don't have required tool(s): $MISSINGTOOLS"
+	echo "This check was made through 'which' command"
+	echo "Please install missing tool(s) and launch kitchen again"
+	exit 1
+fi
+
+# Navigate to our folder, even if user didn't execute it from the root dir
+cd $(dirname $(realpath $0))
 
 # Make sure our tools are executable
+# This is only required if user downloaded zip and permissions are broken (f.e. due to moving files from windows => linux)
 chmod -R 755 tools
 
 # Core
@@ -61,15 +68,27 @@ PRESS_ENTER() {
 
 # Executes commands given in $@ as root
 ROOT_EXECUTE() {
-	if [ $(whoami) == "root" ]; then
-		$@
-	else
-		echo "Root access is required! I'm about to execute command $@"
-		if [ ! -z $(which sudo) ]; then
-			sudo $@
+	local CHOICE="y"
+	while [ "$CHOICE" != "n" ] && [ "$CHOICE" != "N" ]; do
+		if [ $(whoami) == "root" ]; then
+			$@
 		else
-			su -c $@
+			echo "Root access is required! I'm about to execute command $@"
+			if [ ! -z $(which sudo) ]; then
+				sudo $@
+			else
+				su -c $@
+			fi
 		fi
+		if [ $? -eq 0 ]; then
+			return 0
+		else
+			read -p "Sorry, something went wrong, error code: $?. Would you like to try again? [Y/n]: " CHOICE
+		fi
+	done
+	if [ "$CHOICE" == "n" ] || [ "$CHOICE" == "N" ]; then
+		echo "Aborting..."
+		exit 1
 	fi
 }
 
