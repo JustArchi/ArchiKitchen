@@ -1,28 +1,70 @@
+symlink("libGLESv2.so", "/system/lib/libGLESv3.so");
+symlink("mksh", "/system/bin/sh");
 symlink("Roboto-Bold.ttf", "/system/fonts/DroidSans-Bold.ttf");
 symlink("Roboto-Regular.ttf", "/system/fonts/DroidSans.ttf");
-symlink("mksh", "/system/bin/sh");
-symlink("toolbox", "/system/bin/cat", "/system/bin/chcon",
-        "/system/bin/chmod", "/system/bin/chown", "/system/bin/clear",
-        "/system/bin/cmp", "/system/bin/cp", "/system/bin/date",
-        "/system/bin/dd", "/system/bin/df", "/system/bin/dmesg",
-        "/system/bin/du", "/system/bin/getenforce", "/system/bin/getevent",
-        "/system/bin/getprop", "/system/bin/getsebool", "/system/bin/grep",
-        "/system/bin/hd", "/system/bin/id", "/system/bin/ifconfig",
-        "/system/bin/iftop", "/system/bin/insmod", "/system/bin/ioctl",
-        "/system/bin/ionice", "/system/bin/kill", "/system/bin/ln",
-        "/system/bin/load_policy", "/system/bin/log", "/system/bin/ls",
-        "/system/bin/lsmod", "/system/bin/lsof", "/system/bin/md5",
-        "/system/bin/mkdir", "/system/bin/mkswap", "/system/bin/mount",
-        "/system/bin/mv", "/system/bin/nandread", "/system/bin/netstat",
-        "/system/bin/newfs_msdos", "/system/bin/notify", "/system/bin/printenv",
-        "/system/bin/ps", "/system/bin/r", "/system/bin/readlink",
-        "/system/bin/renice", "/system/bin/restorecon", "/system/bin/rm",
-        "/system/bin/rmdir", "/system/bin/rmmod", "/system/bin/route",
-        "/system/bin/runcon", "/system/bin/schedtop", "/system/bin/sendevent",
-        "/system/bin/setconsole", "/system/bin/setenforce",
-        "/system/bin/setprop", "/system/bin/setsebool", "/system/bin/sleep",
-        "/system/bin/smd", "/system/bin/start", "/system/bin/stop",
-        "/system/bin/swapoff", "/system/bin/swapon", "/system/bin/sync",
-        "/system/bin/top", "/system/bin/touch", "/system/bin/umount",
-        "/system/bin/uptime", "/system/bin/vmstat", "/system/bin/watchprops",
-        "/system/bin/wipe", "/system/bin/freshsebool", "/system/bin/reboot");
+symlink("toolbox", "/system/bin/chcon");
+symlink("toolbox", "/system/bin/chmod");
+symlink("toolbox", "/system/bin/chown");
+symlink("toolbox", "/system/bin/clear");
+symlink("toolbox", "/system/bin/cmp");
+symlink("toolbox", "/system/bin/cp");
+symlink("toolbox", "/system/bin/date");
+symlink("toolbox", "/system/bin/dd");
+symlink("toolbox", "/system/bin/df");
+symlink("toolbox", "/system/bin/dmesg");
+symlink("toolbox", "/system/bin/du");
+symlink("toolbox", "/system/bin/getenforce");
+symlink("toolbox", "/system/bin/getevent");
+symlink("toolbox", "/system/bin/getprop");
+symlink("toolbox", "/system/bin/getsebool");
+symlink("toolbox", "/system/bin/grep");
+symlink("toolbox", "/system/bin/hd");
+symlink("toolbox", "/system/bin/id");
+symlink("toolbox", "/system/bin/ifconfig");
+symlink("toolbox", "/system/bin/iftop");
+symlink("toolbox", "/system/bin/insmod");
+symlink("toolbox", "/system/bin/ioctl");
+symlink("toolbox", "/system/bin/ionice");
+symlink("toolbox", "/system/bin/kill");
+symlink("toolbox", "/system/bin/ln");
+symlink("toolbox", "/system/bin/load_policy");
+symlink("toolbox", "/system/bin/log");
+symlink("toolbox", "/system/bin/ls");
+symlink("toolbox", "/system/bin/lsmod");
+symlink("toolbox", "/system/bin/lsof");
+symlink("toolbox", "/system/bin/md5");
+symlink("toolbox", "/system/bin/mkdir");
+symlink("toolbox", "/system/bin/mount");
+symlink("toolbox", "/system/bin/mv");
+symlink("toolbox", "/system/bin/nandread");
+symlink("toolbox", "/system/bin/netstat");
+symlink("toolbox", "/system/bin/newfs_msdos");
+symlink("toolbox", "/system/bin/notify");
+symlink("toolbox", "/system/bin/printenv");
+symlink("toolbox", "/system/bin/ps");
+symlink("toolbox", "/system/bin/reboot");
+symlink("toolbox", "/system/bin/renice");
+symlink("toolbox", "/system/bin/restorecon");
+symlink("toolbox", "/system/bin/rm");
+symlink("toolbox", "/system/bin/rmdir");
+symlink("toolbox", "/system/bin/rmmod");
+symlink("toolbox", "/system/bin/route");
+symlink("toolbox", "/system/bin/runcon");
+symlink("toolbox", "/system/bin/schedtop");
+symlink("toolbox", "/system/bin/sendevent");
+symlink("toolbox", "/system/bin/setconsole");
+symlink("toolbox", "/system/bin/setenforce");
+symlink("toolbox", "/system/bin/setprop");
+symlink("toolbox", "/system/bin/setsebool");
+symlink("toolbox", "/system/bin/sleep");
+symlink("toolbox", "/system/bin/smd");
+symlink("toolbox", "/system/bin/start");
+symlink("toolbox", "/system/bin/stop");
+symlink("toolbox", "/system/bin/sync");
+symlink("toolbox", "/system/bin/top");
+symlink("toolbox", "/system/bin/touch");
+symlink("toolbox", "/system/bin/umount");
+symlink("toolbox", "/system/bin/uptime");
+symlink("toolbox", "/system/bin/vmstat");
+symlink("toolbox", "/system/bin/watchprops");
+symlink("toolbox", "/system/bin/wipe");

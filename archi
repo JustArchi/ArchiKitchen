@@ -329,7 +329,7 @@ CHECK_KERNEL() {
 CHECK_MODEM() {
 	if [ -e $ACTIVE_PROJECT/modem.bin ]; then
 		echo "Modem.bin file found"
-		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
+		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
 		echo "Detected ROM model: $MODEL"
 		echo "Make sure it's proper model for your device!"
 		PRESS_ENTER
@@ -422,28 +422,112 @@ BUILD_UPDATER_SCRIPT() {
 
 # Removes invalid generic permissions
 FIX_PERMISSIONS() {
-	cp $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS $ACTIVE_PROJECT/updater-script-TEMP
-	rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-	for perm in $(cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS | cut -d'"' -f2); do
-		if [ -z "$perm" ]; then
-			continue
-		elif [ ! -e $ACTIVE_PROJECT$perm ]; then
-			echo $perm >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
-			grep -Ev "$perm" $ACTIVE_PROJECT/updater-script-TEMP > $ACTIVE_PROJECT/updater-script-TEMP2
-			mv -f $ACTIVE_PROJECT/updater-script-TEMP2 $ACTIVE_PROJECT/updater-script-TEMP
-		fi
-	done
-	if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
-		echo "No invalid permissions found, your updater-script is clean!"
-	else
-		echo "OK, permissions for following files have been removed from your updater-script: "
-		echo "-=-= REMOVED PERMISSIONS START =-=-"
-		cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
-		echo "-=-= REMOVED PERMISSIONS EOF =-=-"
-		rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-	fi
-	PRESS_ENTER
-	mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS
+	echo "Right now you're using generic list of permissions based on multiple devices"
+	echo "It's usually a good idea to remove invalid permissions, by invalid I mean permissions to non-existent files or folders"
+	read -p "Do you want to remove invalid permissions? [Y/n]: " CHOICE
+	case "$CHOICE" in
+		n|N) ;;
+		*)
+			cp $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS $ACTIVE_PROJECT/updater-script-TEMP
+			rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+			for perm in $(cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS | cut -d'"' -f2); do
+				if [ -z "$perm" ]; then
+					continue
+				elif [ ! -e $ACTIVE_PROJECT$perm ]; then
+					echo $perm >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
+					grep -Ev "$perm" $ACTIVE_PROJECT/updater-script-TEMP > $ACTIVE_PROJECT/updater-script-TEMP2
+					mv -f $ACTIVE_PROJECT/updater-script-TEMP2 $ACTIVE_PROJECT/updater-script-TEMP
+				fi
+			done
+			if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
+				echo "No invalid permissions found, your updater-script is clean!"
+				rm -f $ACTIVE_PROJECT/updater-script-TEMP
+			else
+				echo "OK, permissions for following files have been removed from your updater-script: "
+				echo "-=-= REMOVED PERMISSIONS START =-=-"
+				cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				echo "-=-= REMOVED PERMISSIONS EOF =-=-"
+				rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS
+			fi
+			PRESS_ENTER
+	esac
+}
+
+# Removes invalid generic symlinks, adds local ones
+FIX_SYMLINKS() {
+	echo "Right now you're using generic list of symlinks based on multiple devices"
+	echo "It's usually a good idea to remove invalid symlinks, by invalid I mean symlinks to non-existent files or folders"
+	read -p "Do you want to remove invalid symlinks? [Y/n]: " CHOICE
+	case "$CHOICE" in
+		n|N) ;;
+		*)
+			cp $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS $ACTIVE_PROJECT/updater-script-TEMP
+			rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+			for symlink in $(cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS | cut -d'"' -f2); do
+				if [ -z "$line" ]; then
+					continue
+				elif [ ! -e $ACTIVE_PROJECT$symlink ] && [ ! -e $ACTIVE_PROJECT/system/bin/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/xbin/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/lib/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/ttf/$symlink ] ; then
+					echo $symlink >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
+					grep -Ev "$symlink" $ACTIVE_PROJECT/updater-script-TEMP > $ACTIVE_PROJECT/updater-script-TEMP2
+					mv -f $ACTIVE_PROJECT/updater-script-TEMP2 $ACTIVE_PROJECT/updater-script-TEMP
+				fi
+			done
+			if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
+				echo "No invalid symlinks found, your updater-script is clean!"
+				rm -f $ACTIVE_PROJECT/updater-script-TEMP
+			else
+				echo "OK, symlinks for following files have been removed from your updater-script: "
+				echo "-=-= REMOVED SYMLINKS START =-=-"
+				cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				echo "-=-= REMOVED SYMLINKS EOF =-=-"
+				rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
+			fi
+			PRESS_ENTER
+			echo ""
+	esac
+
+	echo "We can also add local symlinks from your project, these are available only if your project is based on stock image"
+	echo "It's usually a good idea to add missing symlinks, if they're available, in worst case we won't be able to find anything"
+	read -p "Do you want to include local symlinks? [Y/n]: " CHOICE
+	case "$CHOICE" in
+		n|N) ;;
+		*)
+			local TARGET=""
+			local REALPATH=""
+			rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+			echo "" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
+			for symlink in $(find $ACTIVE_PROJECT/ -type l | sort); do
+				TARGET=$(readlink $symlink)
+				REALPATH="/" # TODO: We can assume that we have only one slash (/) before the right pattern ($ACTIVE_PROJECT)
+				REALPATH+=$(echo $symlink | cut -d'/' -f2-) # If there's a way to determine that without making such assumption, it would be great
+				echo "symlink(\""$TARGET"\", \""$REALPATH"\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
+				echo "$REALPATH -> $TARGET" >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
+			done
+			if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
+				echo "No local symlinks found, it looks like your build is not based on stock image"
+			else
+				echo "OK, following local symlinks have been added to your updater-script: "
+				echo "-=-= ADDED SYMLINKS START =-=-"
+				cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				echo "-=-= ADDED SYMLINKS EOF =-=-"
+				rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+			fi
+			PRESS_ENTER
+			echo ""
+	esac
+
+	echo "Please wait..."
+	# Remove duplicated symlinks and sort them
+	cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS | sort -u > $ACTIVE_PROJECT/updater-script-TEMP
+	mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
+
+	# Remove local symlinks, we don't need them to pollute our ROM
+	find $ACTIVE_PROJECT/ -type l -delete
+
+	# Remove empty lines, if any
+	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
 }
 
 # Changes architecture, this covers only utilities available to both of them
@@ -550,14 +634,8 @@ INITD() {
 
 BUILD() {
 	local IGNOREDFILES="$META_INF/updater-script-*"
-	echo "Right now you're using generic list of permissions based on multiple devices"
-	echo "It's usually a good idea to remove invalid permissions, by invalid I mean permissions to non-existent files or folders"
-	read -p "Do you want to remove invalid permissions? [y/n]: " CHOICE
-	case "$CHOICE" in
-		n|N) ;;
-		*)
-			FIX_PERMISSIONS
-	esac
+	FIX_PERMISSIONS
+	FIX_SYMLINKS
 	BUILD_UPDATER_SCRIPT
 	echo "Sometimes kitchen may produce an incorrect updater-script file, that's why you're asked to review updater-script and eventually fix it if needed BEFORE building ROM"
 	echo "Updater-script is based on so-called 'segments' available in the same directory - $META_INF"
