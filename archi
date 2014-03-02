@@ -75,7 +75,7 @@ ROOT_EXECUTE() {
 		if [ "$CUSER" == "root" ]; then
 			$*
 		else
-			echo "Root access is required! I'm about to execute command $@"
+			echo "Root access is required! $@"
 			if [ ! -z $(which sudo) ]; then
 				sudo $*
 			else
