@@ -779,13 +779,11 @@ DEODEX() {
 }
 
 ZIPALIGN() {
-	for f in $(find $ACTIVE_PROJECT/system -type f -iname "*.apk"); do
-		local FILE=$(basename $f)
-		local FILEDIR=$(dirname $f)
-		echo "Zipaligning $FILE..."
-		tools/zipalign/zipalign -f $ALIGN "$FILEDIR/$FILE" "$FILEDIR/$FILE.zipaligned"
-		mv -f "$FILEDIR/$FILE.zipaligned" "$FILEDIR/$FILE"
+	for APK in $(find $ACTIVE_PROJECT/system -type f -iname "*.apk"); do
+		echo "Zipaligning $(basename $APK)..."
+		./tools/zipalign/zipalign -f "$ALIGN" "$APK" "$APK.zipaligned" && mv -f "$APK.zipaligned" "$APK"
 	done
+	echo
 	echo "Zipaligning finished"
 	PRESS_ENTER
 }
@@ -901,7 +899,7 @@ while :; do
 		echo "[YES]"
 	fi
 	echo -n "Zipaligned? "
-	tools/zipalign/zipalign -c $ALIGN $ACTIVE_PROJECT/system/framework/framework-res.apk
+	./tools/zipalign/zipalign -c $ALIGN $ACTIVE_PROJECT/system/framework/framework-res.apk
 	if [ $? -ne 0 ]; then
 		echo "[NO]"
 	else
