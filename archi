@@ -18,7 +18,7 @@ set +e
 
 # Initial variables
 VERSION="1.0"
-TOOLS=(which realpath whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
+TOOLS=(which whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
 XDALINK="http://forum.xda-developers.com/showthread.php?t=2597220"
 
 ACTIVE_PROJECT=""
@@ -57,7 +57,7 @@ if [ ! -z "$MISSINGTOOLS" ]; then
 fi
 
 # Navigate to our folder, even if user didn't execute it from the root dir
-cd $(dirname $(realpath $0))
+cd $(dirname $0)
 
 # Make sure our tools are executable
 # This is only required if user downloaded zip and permissions are broken (f.e. due to moving files from windows => linux)
