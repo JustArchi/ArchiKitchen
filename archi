@@ -57,6 +57,12 @@ if [ ! -z "$MISSINGTOOLS" ]; then
 	exit 1
 fi
 
+# Check LONG_BIT for determining host architecture, this is unused for a while
+HOSTARCH="$(getconf LONG_BIT)"
+
+# Set common tools
+ZIPALIGN="./tools/zipalign/zipalign"
+
 # Navigate to our folder, even if user didn't execute it from the root dir
 cd $(dirname $0)
 
@@ -781,7 +787,7 @@ DEODEX() {
 
 ZIPALIGN_APK() {
 	echo "Zipaligning $(basename "$1")..."
-	./tools/zipalign/zipalign -f "$ALIGN" "$1" "$1.zipaligned" >/dev/null 2>&1 && mv -f "$1.zipaligned" "$1"
+	"$ZIPALIGN" -f "$ALIGN" "$1" "$1.zipaligned" >/dev/null 2>&1 && mv -f "$1.zipaligned" "$1"
 	return $?
 }
 
@@ -892,7 +898,7 @@ PRINT_ROM_STATUS() {
 		echo "[YES]"
 	fi
 	echo -n "Zipaligned? "
-	./tools/zipalign/zipalign -c $ALIGN $ACTIVE_PROJECT/system/framework/framework-res.apk
+	"$ZIPALIGN" -c $ALIGN $ACTIVE_PROJECT/system/framework/framework-res.apk
 	if [ $? -ne 0 ]; then
 		echo "[NO]"
 	else
