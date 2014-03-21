@@ -5,4 +5,4 @@ Also, for a reference where to search for updates
 Busybox 1.22.1, 9  February - https://play.google.com/store/apps/details?id=stericson.busybox
 Kernel repack tools 9260ca90b5 - https://github.com/osm0sis/mkbootimg
 SuperSU 1.93 - http://download.chainfire.eu/supersu
-Zipalign R22.3 - http://developer.android.com/sdk/index.html
+Zipalign R22.6.1 - http://developer.android.com/sdk/index.html
