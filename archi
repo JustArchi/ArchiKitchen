@@ -85,227 +85,253 @@ PRESS_ENTER() {
 
 # Executes commands given in arguments as root
 ROOT_EXECUTE() {
-	local CHOICE="y"
-	while [ "$CHOICE" != "n" ] && [ "$CHOICE" != "N" ]; do
-		if [ "$CUSER" == "root" ]; then
-			$*
+	if [ "$CUSER" == "root" ]; then
+		$*
+	else
+		echo "Root access is required! $@"
+		if [ ! -z $(which sudo) ]; then
+			sudo $*
 		else
-			echo "Root access is required! $@"
-			if [ ! -z $(which sudo) ]; then
-				sudo $*
-			else
-				su -c $*
-			fi
+			su -c $*
 		fi
-		if [ $? -eq 0 ]; then
-			return 0
-		else
-			read -p "Sorry, something went wrong, error code: $?. Would you like to try again? [Y/n]: " CHOICE
-		fi
-	done
-	case "$CHOICE" in
-		n|N)
-			echo "Aborting..."
-			exit 1
-	esac
+	fi
+}
+
+SED_CHANGE_WORD() {
+	# $1 - What we're changing
+	# $2 - To what we're changing
+	# $3 - File location for that
+	# $4 - Unique delimiter (optional)
+	if [ -z "$4" ]; then
+		sed -i 's/'"$1"'/'"$2"'/g' "$3"
+	else
+		sed -i 's'"$4""$1""$4""$2""$4"'g' "$3"
+	fi
+}
+
+GREP_DELETE_WORD() {
+	# $1 - What we're deleting
+	# $2 - File location for that
+	grep -v "$1" "$2" > "$2.tmp" && mv -f "$2.tmp" "$2"
 }
 
 # Sets ACTIVE_PROJECT
 DO_SETPROJECT() {
 	echo
-	echo "You currently don't have any active projects"
-	echo "I'll now list you all available projects, which you created in the past"
+	echo "You currently don't have any active project set"
+	echo "You can open any project you've created in the past or create a new one:"
 	echo
-	COUNT=0
-	for i in $(find . -maxdepth 1 -iname "PROJECT_*" -type d); do
-		COUNT=$(expr $COUNT + 1)
-		echo "["$COUNT"] - $(basename $i)"
-	done
-	if [ $COUNT -gt 0 ]; then
-		echo "I found $COUNT available projects, and listed them above. Please tell me which one you want to use"
-		echo "Write a number of the project, which you want to activate or..."
-	else
-		echo "Sorry, I didn't find any available project, it looks like you must create a new one"
-	fi
-	echo
-	echo "Write n to create a new project"
-	echo "Write x to abort"
-	echo -n "CHOICE: "
-	read CHOICE
+	echo "n - Create a new project"
+	echo "e - Use existing project"
+	echo "x - Exit"
+	read -p "Your choice: " CHOICE
 	case "$CHOICE" in
-		n|N)
-			DO_NEWPROJECT
-			;;
-		x|X)
-			exit 0
-			;;
-		*)
-			if [ $CHOICE -gt $COUNT ] || [ $CHOICE -lt 1 ]; then
-				echo "Error, invalid selection"
-				return 1
-			fi
-			COUNT=$CHOICE
-			for i in $(find . -maxdepth 1 -iname "PROJECT_*" -type d); do
-				COUNT=$(expr $COUNT - 1)
-				if [ $COUNT -eq 0 ]; then
-					ACTIVE_PROJECT=$(basename $i)
-					break
-				fi
-			done
-			if [ -z $ACTIVE_PROJECT ]; then
-				echo "Error, you didn't select anything"
-				return 1
-			else
-				echo "OK, current active project is now $ACTIVE_PROJECT"
-			fi
+		n|N) SET_NEWPROJECT ;;
+		e|E) SET_OLDPROJECT ;;
+		*) exit 0 ;;
 	esac
-	return 0
+}
+
+TRY_MOUNT() {
+	echo "Trying to mount $(basename $1)"
+	mkdir -p /tmp/ArchiKitchenLOOP
+	echo "Stage 1: Mounting with automatic filesystem..."
+	ROOT_EXECUTE "mount -o loop $1 $2"
+	if [ $? -eq 0 ]; then
+		echo "Success!"
+		return 0
+	fi
+	echo "Failed!"
+	echo "Stage 2: Checking if image is in special sparse ext4 format available for conversion..."
+	if [ $(od -A n -h -N 5 "$1" | sed 's/ //g') = "ff3aed260001" ]; then
+		echo "Yes it is!"
+		if [ ! -x "temp/simg2img" ]; then
+			echo "Compiling simg2img..."
+			mkdir -p "temp"
+			gcc -O2 "tools/simg2img/sparse_crc32.c" "tools/simg2img/simg2img.c" -o "temp/simg2img"
+		fi
+		echo "Converting sparse image to image..."
+		./temp/simg2img "$1" "$1".simg2img
+		if [ $? -ne 0 ]; then
+			echo "Convertion failed"
+			PRESS_ENTER
+		else
+			mv -f "$1".simg2img "$1"
+			echo "Mounting converted image..."
+			ROOT_EXECUTE "mount -o loop $1 $2"
+			if [ $? -eq 0 ]; then
+				echo "Success!"
+				return 0
+			fi
+		fi
+		echo "Failed!"
+	else
+		echo "It doesn't look like sparse ext4 file"
+	fi
+	echo "Sorry, all stages failed, we're not able to extract files from this image in any implemented way"
+	echo "Either it's not a valid partition image, or we don't know how to mount it"
+	PRESS_ENTER
+	return 1
+}
+
+DEL_PROJECT() {
+	echo "Cleaning $ACTIVE_PROJECT"
+	rm -rf "$ACTIVE_PROJECT"
+	ACTIVE_PROJECT=""
+}
+
+NEWPROJECT_BARE() {
+	ACTIVE_PROJECT="PROJECT_"
+	ACTIVE_PROJECT+="$(date '+%m%d%y_%H%M%S')"
+	mkdir -p "$ACTIVE_PROJECT/system"
+	BUILD_META_INF
+	BUILD_UPDATER_SCRIPT
+}
+
+NEWPROJECT_STOCK() {
+	echo "To create a ROM from stock partition images, make sure that you have:"
+	echo
+	echo "[REQUIRED] system.img - Partition image for /system partition"
+	echo "[REQUIRED] boot.img - Raw kernel image for boot block"
+	echo "[OPTIONAL] cache.img - Partition image for /cache partition"
+	echo "[OPTIONAL] modem.bin - Raw modem image for modem block"
+	echo
+	echo "Please notice that some ROMs may have other requirements, for example having cache.img as mandatory and not optional"
+
+	local READY=0
+	while [ $READY -eq 0 ]; do
+		echo
+		echo "Please fill a path for your system.img file"
+		echo "Potential candidates:"
+		echo "=-=-=-=-=-=-=-=-="
+		find base_drops/ -type f -iname "*system*"
+		echo "=-=-=-=-=-=-=-=-="
+		read -p "system.img: " SYSTEMIMG
+
+		echo
+		echo "Please fill a path for your boot.img file"
+		echo "Potential candidates:"
+		echo "=-=-=-=-=-=-=-=-="
+		find base_drops/ -type f -iname "*boot*"
+		echo "=-=-=-=-=-=-=-=-="
+		read -p "boot.img: " BOOTIMG
+
+		echo
+		echo "Please fill a path for your cache.img file. Leave empty if you don't have one"
+		echo "Potential candidates:"
+		echo "=-=-=-=-=-=-=-=-="
+		find base_drops/ -type f -iname "*cache*"
+		echo "=-=-=-=-=-=-=-=-="
+		read -p "cache.img: " CACHEIMG
+
+		echo
+		echo "Please fill a path for your modem.bin file. Leave empty if you don't have one"
+		echo "Potential candidates:"
+		echo "=-=-=-=-=-=-=-=-="
+		find base_drops/ -type f -iname "*modem*"
+		echo "=-=-=-=-=-=-=-=-="
+		read -p "modem.bin: " MODEMIMG
+
+		if [ -f "$SYSTEMIMG" ] && [ -f "$BOOTIMG" ] && ([ -z "$CACHEIMG" ] || [ -f "$CACHEIMG" ]) && ([ -z "$MODEMIMG" ] || [ -f "$MODEMIMG" ]); then
+			READY=1
+		else
+			echo "Some of your files do not exist"
+			PRESS_ENTER
+		fi
+	done
+
+	ACTIVE_PROJECT="PROJECT_$(date '+%m%d%y_%H%M%S')"
+	echo "Creating $ACTIVE_PROJECT"
+	mkdir -p "$ACTIVE_PROJECT/system"
+
+	# KERNEL
+	cp "$BOOTIMG" "$ACTIVE_PROJECT/boot.img"
+
+	# SYSTEM
+	cp "$SYSTEMIMG" "$ACTIVE_PROJECT/system.img"
+	TRY_MOUNT "$ACTIVE_PROJECT/system.img" "/tmp/ArchiKitchenLOOP" || (DEL_PROJECT; return 1)
+	echo "Extracting everything from mounted system partition..."
+	ROOT_EXECUTE "cp -R /tmp/ArchiKitchenLOOP/* $ACTIVE_PROJECT/system/"
+	umount /tmp/ArchiKitchenLOOP
+	rm -f "$ACTIVE_PROJECT/system.img"
+
+	# CACHE
+	if [ ! -z "$CACHEIMG" ]; then
+		cp "$CACHEIMG" "$ACTIVE_PROJECT/cache.img"
+		TRY_MOUNT "$ACTIVE_PROJECT/cache.img" "/tmp/ArchiKitchenLOOP"
+		if [ -f "/tmp/ArchiKitchenLOOP/recovery/sec_csc.zip" ]; then
+			echo "Found common Samsung sec_csc.zip file, extracting it and merging with the project"
+			ROOT_EXECUTE "unzip -q /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip -d $ACTIVE_PROJECT/"
+		else
+			echo "Could not detect any known cache format"
+			echo "This is typical when cache doesn't contain any valuable files, such as sec_csc.zip in case of Samsung ROMs"
+			echo "Extract everything you need from /tmp/ArchiKitchenLOOP before going to the next step"
+			PRESS_ENTER
+		fi
+		umount /tmp/ArchiKitchenLOOP
+		rm -f "$ACTIVE_PROJECT/cache.img"
+	fi
+
+	# MODEM
+	if [ ! -z "$MODEMIMG" ]; then
+		cp "$MODEMIMG" "$ACTIVE_PROJECT/modem.bin"
+	fi
+
+	# Fix permissions
+	ROOT_EXECUTE "chown -hR $CUSER.$CUSER $ACTIVE_PROJECT"
+	ROOT_EXECUTE "chmod -R 755 $ACTIVE_PROJECT"
+
+	# Generate required files
+	rm -rf "$ACTIVE_PROJECT/META-INF" # In case we have any bloat from sec_csc.zip or similar
+	BUILD_META_INF
+	BUILD_UPDATER_SCRIPT
+	PRESS_ENTER
+	SET_KERNEL
+	SET_MODEM
+}
+
+NEWPROJECT_ZIP() {
+	NEWPROJECT_BARE # TODO
 }
 
 # Creates new project
-DO_NEWPROJECT() {
+SET_NEWPROJECT() {
 	clear
-	echo "You can create a new bare bones project or a project based on a base drop"
-	echo "In most situations you want to extract the base, but bare bones project may be useful i.e. for deodexing a set of apps only"
+	echo "Before you begin, you must specify what kind of the project you want to create"
 	echo
-	echo "b - Create bare bones project"
-	echo "e - Extract a ROM and use as base"
-	read -p "Which one you want to create? [b/e]: " CHOICE
+	echo "b - Create a Bare Bones project"
+	echo "i - Create a ZIP-flashable ROM from stock partition image(s)"
+	echo "z - Create a ZIP-flashable ROM from other ZIP-flashable ROM"
+	echo
+	read -p "Which choice describes your case? [B/i/z]: " CHOICE
 	case "$CHOICE" in
-		e|E)
-			;;
-		*)
-			ACTIVE_PROJECT="PROJECT_"
-			ACTIVE_PROJECT+="$(date '+%m%d%y_%H%M%S')"
-			echo "Creating bare $ACTIVE_PROJECT"
-			mkdir -p $ACTIVE_PROJECT/system
-			return 0
+		i|I) NEWPROJECT_STOCK ;;
+		z|Z) NEWPROJECT_ZIP ;;
+		*) NEWPROJECT_BARE ;;
 	esac
-	echo "ArchiKitchen currently supports system in system.img and system.img.ext4 format"
-	echo "Please put proper base drop in base_drops folder"
-	echo "It can be standalone system.img(.ext4) file, or an archive, which contains such file"
-	echo "Are you ready?"
-	PRESS_ENTER
-	SEARCH=true
-	while ($SEARCH); do
-		echo "Looking for system.img..."
-		SYSTEMDIR=""
-		SYSTEMFILE=""
-		for f in $(find base_drops -type f); do
-			FILE=$(basename $f)
-			case "$FILE" in
-				"system.img")
-					SYSTEMDIR=$(dirname $f)
-					SYSTEMFILE=$(basename $f)
-					echo "Found $SYSTEMDIR/$SYSTEMFILE, which should be the proper file"
-					SEARCH=false
-					break
-					;;
-				"system.img.ext4")
-					SYSTEMDIR=$(dirname $f)
-					SYSTEMFILE=$(basename $f)
-					echo "Found $SYSTEMDIR/$SYSTEMFILE, which should be the proper file"
-					SEARCH=false
-					break
-					;;
-			esac
-		done
-		if [ -z "$SYSTEMFILE" ]; then
-			echo "No system.img found"
-			echo
-			echo "r - refresh"
-			echo "d - decompress one of the files, if it should contain system.img"
-			echo "x - abort"
-			echo -n "CHOICE: "
-			read CHOICE
-			case "$CHOICE" in
-				r|R)
-					clear
-					;;
-				d|D)
-					COUNT=0
-					for i in $(find base_drops/ -type f); do
-						COUNT=$(expr $COUNT + 1)
-						echo "["$COUNT"] - $(dirname $i)/$(basename $i)"
-					done
-					echo "Please tell me which file should contain system.img"
-					echo -n "CHOICE: "
-					read CHOICE
-					if [ $CHOICE -gt $COUNT ] || [ $CHOICE -lt 1 ]; then
-						echo "Error, invalid selection"
-						exit 1
-					fi
-					COUNT=$CHOICE
-					for i in $(find base_drops/ -type f); do
-						COUNT=$(expr $COUNT - 1)
-						if [ $COUNT -eq 0 ]; then
-							FILE="$i"
-							break
-						fi
-					done
-					echo "Extracting everything from $FILE"
+}
 
-					# TODO: We should find more universal way for finding out type of the file
-					tar xvf $FILE -C base_drops/ || unzip $FILE -d base_drops/
-
-					if [ $? -ne 0 ]; then
-						echo "Error, it looks like this file format isn't supported"
-						return 1
-					fi
-					;;
-				x|X)
-					return 1
-					;;
-				*)
-					echo "No valid selection"
-					return 1
-			esac
-		fi
+SET_OLDPROJECT() {
+	clear
+	echo "Here is the list of projects you've created in the past:"
+	echo "=-=-=-=-=-=-=-=-="
+	find . -type d -iname "PROJECT_*" | while read line; do
+		basename "$line"
 	done
-
-	ACTIVE_PROJECT="PROJECT_"
-	ACTIVE_PROJECT+="$(date '+%m%d%y_%H%M%S')"
-	echo "Creating $ACTIVE_PROJECT"
-	mkdir -p $ACTIVE_PROJECT/system
-	cp $SYSTEMDIR/boot.img $ACTIVE_PROJECT/boot.img
-
-	# TODO: Support non-ext4 filesystems
-	FS="ext4"
-
-	cp $SYSTEMDIR/$SYSTEMFILE $ACTIVE_PROJECT/system.img
-	for EXTRA in 'cache.img' 'modem.bin'; do
-		if [ -e $SYSTEMDIR/$EXTRA ]; then
-			echo "Found extra $EXTRA file"
-			echo "Do you want to include this file in your ROM?"
-			case "$EXTRA" in
-				"cache.img")
-					echo "This file usually contains CSC stuff. Say yes if you're unsure"
-					;;
-				"modem.bin")
-					echo "This file usually contains low-level binary code responsible for mobile connection. Say no if you're unsure"
-					;;
-			esac
-			echo
-			read -p "Include? [Y/n]: " CHOICE
-			case "$CHOICE" in
-				n|N) ;;
-				*) cp $SYSTEMDIR/$EXTRA $ACTIVE_PROJECT/$EXTRA
-			esac
-		fi
-	done
-	for PARTITION in 'system.img' 'cache.img'; do
-		if [ -e $ACTIVE_PROJECT/$PARTITION ]; then
-			mv -f $ACTIVE_PROJECT/$PARTITION $ACTIVE_PROJECT/$PARTITION.$FS
-		fi
-	done
-
-	DO_MAKESURE_WEHAVE_SIMG2IMG
-	DO_SIMG2IMG_ALL
-	rm -rf $ACTIVE_PROJECT/META-INF # We don't want old junk from cache or system partitions, it's invalid anyway
-	DO_MAKESURE_WEHAVE_METAINF
-	CHECK_KERNEL
-	CHECK_MODEM
-	BUILD_UPDATER_SCRIPT
+	echo "=-=-=-=-=-=-=-=-="
+	echo "Write a name of any from the projects detected above or 'x' to go back"
+	read -p "Your selected project: " CHOICE
+	case "$CHOICE" in
+		x|X) return ;;
+		*)
+			if [ -d "$CHOICE" ]; then
+				ACTIVE_PROJECT="$CHOICE"
+			else
+				echo "Invalid selection"
+				PRESS_ENTER
+			fi
+		;;
+	esac
 }
 
 # Converts all stock images to mountable linux ones
@@ -335,66 +361,87 @@ DO_SIMG2IMG_ALL() {
 }
 
 # Sets up kernel
-CHECK_KERNEL() {
-	if [ ! -e $ACTIVE_PROJECT/$META_INF/updater-script ] || ([ $(grep -qi "boot.img" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ] && [ $(grep -qi "zImage" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ]); then
-		echo "WARNING! No kernel path found in current updater-script"
-		echo "This is typical when you're converting image-based rom to zip-based rom"
+SET_KERNEL() {
+	if [ -f $ACTIVE_PROJECT/boot.img ] && ([ $(grep -qi "boot.img" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ] || [ $(grep -qi "/tmp/invalid_kernel_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -eq 0 ]); then
+		clear
+		echo "WARNING! Kernel has been found but there's no path in the current updater-script"
+		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
 		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
-		echo "Detected ROM model: $MODEL"
-		echo "Make sure it's proper model for your device!"
-		PRESS_ENTER
-		if [ -e files/product/$MODEL/KERNEL ]; then
-			KERNELPATH=$(cat files/product/$MODEL/KERNEL)
-		else
-			echo "This model does not yet exist in our database"
-			echo "Please write your kernel path manually. Example of kernel path from GT-I9300: /dev/block/mmcblk0p5"
-			echo -n "Kernel path for your model: "
-			read KERNELPATH
+		if [ -z "$MODEL" ]; then
+			echo "ERROR: Could not detect ROM model, setting of kernel failed"
+			PRESS_ENTER
+			return 1
 		fi
-		echo "Based on model above and our little database, your kernel path should be $KERNELPATH"
-		echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
-		PRESS_ENTER
-		echo "\"$KERNELPATH\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL
-		echo "OK, This is the final effect:"
-		cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL
-		echo "Make sure that path and syntax is correct, if not, modify it manually through file $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL BEFORE you proceed to the next step"
+		echo
+		echo "Detected ROM model: $MODEL"
+		if [ -f files/product/$MODEL/KERNEL ]; then
+			KERNELPATH=$(cat files/product/$MODEL/KERNEL)
+			echo "Based on detected ROM model and our little database, your kernel path should be: $KERNELPATH"
+		else
+			echo "This model does not yet exist in our database. Please fill your kernel path manually"
+			echo
+			echo "Example for I9300/m0 (Samsung Galaxy S3): /dev/block/mmcblk0p5"
+			echo "Example for N9005/hlte (Samsung Note 3): /dev/block/mmcblk0p14"
+			echo "Example for E960/mako (LG Nexus 4): /dev/block/platform/msm_sdcc.1/by-name/boot"
+			echo
+			echo "MAKE SURE THAT THE PATH IS CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
+			read -p "Kernel path for your device: " KERNELPATH
+		fi
+		SED_CHANGE_WORD "/tmp/invalid_kernel_path" "$KERNELPATH" "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL" "^"
+		echo
+		echo "The final effect is:"
+		echo "=-=-=-=-=-=-=-=-="
+		cat "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL"
+		echo
+		echo "=-=-=-=-=-=-=-=-="
+		echo "Make sure that the command is correct"
+		echo "If you need to apply any changes to the generated command, please edit $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_KERNEL before going to the next step"
 		PRESS_ENTER
 	fi
 }
 
 # Sets up modem
-CHECK_MODEM() {
-	if [ -e $ACTIVE_PROJECT/modem.bin ]; then
-		echo "Modem.bin file found"
+SET_MODEM() {
+	if [ -f $ACTIVE_PROJECT/modem.bin ] && ([ $(grep -qi "modem.bin" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ] || [ $(grep -qi "/tmp/invalid_modem_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -eq 0 ]); then
+		clear
+		echo "WARNING! Modem has been found but there's no path in the current updater-script"
+		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
 		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
-		echo "Detected ROM model: $MODEL"
-		echo "Make sure it's proper model for your device!"
-		PRESS_ENTER
-		if [ -e files/product/$MODEL/MODEM ]; then
-			MODEMPATH=$(cat files/product/$MODEL/MODEM)
-		else
-			echo "This model does not yet exist in our database"
-			echo "Please write your modem path manually. Example of modem path from GT-I9300: /dev/block/mmcblk0p7"
-			echo -n "Modem path for your model: "
-			read MODEMPATH
-		fi
-		echo "Based on model above and our little database, your modem path should be $MODEMPATH"
-		if [ "$MODEMPATH" == "NULL" ]; then
-			echo "WARNING! Your model path is NULL, which means that your device does not support flashing modem directly"
-			echo "Sorry but it's not possible to include it in your ROM"
-			rm -f $ACTIVE_PROJECT/modem.bin
-			rm -f $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
-		else
-			echo "MAKE SURE IT'S CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
+		if [ -z "$MODEL" ]; then
+			echo "ERROR: Could not detect ROM model, setting of modem failed"
 			PRESS_ENTER
-			echo "\"$MODEMPATH\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
-			echo "OK, This is the final effect:"
-			cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
-			echo "Make sure that path and syntax is correct, if not, modify it manually through file $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM BEFORE you proceed to the next step"
+			return 1
+		fi
+		echo "Detected ROM model: $MODEL"
+		if [ -f files/product/$MODEL/MODEM ]; then
+			MODEMPATH=$(cat files/product/$MODEL/MODEM)
+			echo "Based on detected ROM model and our little database, your modem path should be: $MODEMPATH"
+		else
+			echo "This model does not yet exist in our database. Please fill your modem path manually"
+			echo "Please notice that some models are not supporting flashing a modem via recovery, in such case you should use generic 'NULL' word in this question"
+			echo
+			echo "Example for I9300/m0 (Samsung Galaxy S3): /dev/block/mmcblk0p7"
+			echo "Example for N9005/hlte (Samsung Note 3): NULL"
+			echo "Example for E960/mako (LG Nexus 4): /dev/block/platform/msm_sdcc.1/by-name/modem"
+			echo
+			echo "MAKE SURE THAT THE PATH IS CORRECT, OVERWRITING WRONG PATHS MAY LEAD TO SOFT AND HARD BRICKS"
+			read -p "Modem path for your device: " MODEMPATH
+		fi
+		if [ "$MODEMPATH" = "NULL" ]; then
+			echo "It looks like your device does not support flashing a modem through recovery, your modem path is NULL"
+			rm -f "$ACTIVE_PROJECT/modem.bin" "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM"
+		else
+			SED_CHANGE_WORD "/tmp/invalid_modem_path" "$MODEMPATH" "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM" "^"
+			echo
+			echo "The final effect is:"
+			echo "=-=-=-=-=-=-=-=-="
+			cat "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM"
+			echo
+			echo "=-=-=-=-=-=-=-=-="
+			echo "Make sure that the command is correct"
+			echo "If you need to apply any changes to the generated command, please edit $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM before going to the next step"
 		fi
 		PRESS_ENTER
-	else
-		rm -f $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_MODEM
 	fi
 }
 
@@ -407,7 +454,7 @@ DO_MAKESURE_WEHAVE_SIMG2IMG() {
 }
 
 # Creates META-INF, if not yet available
-DO_MAKESURE_WEHAVE_METAINF() {
+BUILD_META_INF() {
 	mkdir -p $ACTIVE_PROJECT/$META_INF
 	cp files/product/generic/update-binary $ACTIVE_PROJECT/$META_INF/update-binary
 	for UPDATER_SCRIPT in files/product/generic/updater-scripts/*; do
@@ -461,7 +508,9 @@ BUILD_UPDATER_SCRIPT() {
 		cat "$UPDATER_SCRIPT" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
 		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line AFTER appending"
 	done
+
 	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/updater-script # This removes safety lines added above
+	GREP_DELETE_WORD "/tmp/invalid" "$ACTIVE_PROJECT/$META_INF/updater-script" "^" # This is to ensure that we won't pollute our updater-script with invalid paths for kernel or modem
 }
 
 # Removes invalid generic permissions
@@ -848,11 +897,11 @@ BUSYBOX() {
 ADB() {
 	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
 		if [ $(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?) -eq 0 ]; then
-			sed -i 's/ro.adb.secure=1/ro.adb.secure=0/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
-			sed -i 's/ro.secure=1/ro.secure=0/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
+			SED_CHANGE_WORD "ro.adb.secure=1" "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
+			SED_CHANGE_WORD "ro.secure=1" "ro.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
 		else
-			sed -i 's/ro.adb.secure=0/ro.adb.secure=1/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
-			sed -i 's/ro.secure=0/ro.secure=1/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
+			SED_CHANGE_WORD "ro.adb.secure=0" "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
+			SED_CHANGE_WORD "ro.secure=0" "ro.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
 		fi
 	fi
 }
