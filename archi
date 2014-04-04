@@ -21,7 +21,7 @@ TOOLS=(which whoami basename dirname gcc java perl sed cut wget od wc cpio zip u
 XDALINK="http://forum.xda-developers.com/showthread.php?t=2597220"
 
 ACTIVE_PROJECT=""
-ARCH="arm"
+ARCH="unknown"
 CUSER=$(whoami)
 
 ALIGN=4
@@ -566,20 +566,6 @@ FIX_SYMLINKS() {
 	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
 }
 
-# Changes architecture, this covers only utilities available to both of them
-CHANGE_ARCHITECTURE() {
-	case "$ARCH" in
-		"arm")
-			ARCH="x86"
-			;;
-		"x86")
-			ARCH="arm"
-			;;
-		*)
-			ARCH="arm"
-	esac
-}
-
 # Extracts the kernel
 KERNEL_EXTRACT() {
 	if [ ! -e $ACTIVE_PROJECT/kernel ]; then
@@ -893,7 +879,18 @@ PRINT_PROJECT_STATUS() {
 }
 
 PRINT_ROM_STATUS() {
-	echo "Architecture: [$ARCH] "
+	echo -n "Architecture: ["
+	if [ "$ARCH" = "unknown" ] && [ -f "$ACTIVE_PROJECT/system/build.prop" ]; then
+		ARCH="$(grep -i "ro.product.cpu.abi" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
+		if [ $(echo "$ARCH" | grep -qi "arm"; echo $?) -eq 0 ]; then
+			ARCH="arm"
+		elif [ $(echo "$ARCH" | grep -qi "x86"; echo $?) -eq 0 ]; then
+			ARCH="x86"
+		else
+			ARCH="unknown"
+		fi
+	fi
+	echo "$ARCH]"
 	echo
 
 	echo -n "ArchiDroid Init.d? "
@@ -952,8 +949,6 @@ PRINT_ROM_STATUS() {
 }
 
 PRINT_SWITCHES() {
-	echo "a   - Change architecture (arm/x86)"
-	echo
 	echo "adi - Enable/Disable ArchiDroid Init.d (software debuggerd hook)"
 	echo
 	echo "d   - Deodex Everything"
@@ -1048,7 +1043,6 @@ while :; do
 	read -p "CHOICE: " CHOICE
 	case "$CHOICE" in
 		ak|AK) PAGE_SETTINGS ;;
-		a|A) CHANGE_ARCHITECTURE ;;
 		adi|ADI) ARCHIDROID_INITD ;;
 		d|D) DEODEX ;;
 		z|Z) ZIPALIGN ;;
