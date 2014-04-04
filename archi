@@ -1,5 +1,13 @@
 #!/bin/bash
-# Copyright 2014 JustArchi@JustArchi.net
+
+#     _             _     _ _  ___ _       _
+#    / \   _ __ ___| |__ (_) |/ (_) |_ ___| |__   ___ _ __
+#   / _ \ | '__/ __| '_ \| | ' /| | __/ __| '_ \ / _ \ '_ \
+#  / ___ \| | | (__| | | | | . \| | || (__| | | |  __/ | | |
+# /_/   \_\_|  \___|_| |_|_|_|\_\_|\__\___|_| |_|\___|_| |_|
+#
+# Copyright 2014 Łukasz "JustArchi" Domeradzki
+# Contact: JustArchi@JustArchi.net
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -850,7 +858,13 @@ ADB() {
 }
 
 PRINT_BANNER() {
-	echo "ArchiKitchen version $VERSION - developed by JustArchi"
+	echo "    _             _     _ _  ___ _       _"
+	echo "   / \   _ __ ___| |__ (_) |/ (_) |_ ___| |__   ___ _ __"
+	echo "  / _ \ | '__/ __| '_ \| | ' /| | __/ __| '_ \ / _ \ '_ \\"
+	echo " / ___ \| | | (__| | | | | . \| | || (__| | | |  __/ | | |"
+	echo "/_/   \_\_|  \___|_| |_|_|_|\_\_|\__\___|_| |_|\___|_| |_|"
+	echo
+	echo "Developed by JustArchi"
 	echo "Original thread: $XDALINK"
 	echo "--------------------------------------------------------------------------------"
 }
