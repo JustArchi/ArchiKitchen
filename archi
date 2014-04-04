@@ -328,7 +328,7 @@ DO_SIMG2IMG_ALL() {
 
 # Sets up kernel
 CHECK_KERNEL() {
-	if [ ! -e $ACTIVE_PROJECT/$META_INF/updater-script ] || ([ $(grep -i "boot.img" $ACTIVE_PROJECT/$META_INF/updater-script | wc -l) -eq 0 ] && [ $(grep -i "zImage" $ACTIVE_PROJECT/$META_INF/updater-script | wc -l) -eq 0 ]); then
+	if [ ! -e $ACTIVE_PROJECT/$META_INF/updater-script ] || ([ $(grep -qi "boot.img" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ] && [ $(grep -qi "zImage" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ]); then
 		echo "WARNING! No kernel path found in current updater-script"
 		echo "This is typical when you're converting image-based rom to zip-based rom"
 		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
@@ -839,7 +839,7 @@ BUSYBOX() {
 
 ADB() {
 	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
-		if [ $(grep "ro.adb.secure=1" $ACTIVE_PROJECT/kernel/ramdisk/default.prop | wc -l) -gt 0 ]; then
+		if [ $(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?) -eq 0 ]; then
 			sed -i 's/ro.adb.secure=1/ro.adb.secure=0/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
 			sed -i 's/ro.secure=1/ro.secure=0/g' $ACTIVE_PROJECT/kernel/ramdisk/default.prop
 		else
@@ -933,13 +933,13 @@ PRINT_ROM_STATUS() {
 	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
 		echo "--------------------------------------------------------------------------------"
 		echo -n "ADB? "
-		if [ $(grep "ro.adb.secure=0" $ACTIVE_PROJECT/kernel/ramdisk/default.prop | wc -l) -gt 0 ]; then
+		if [ $(grep -qi "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?) -eq 0 ]; then
 			echo "[INSECURE]"
 		else
 			echo "[SECURE]"
 		fi
 		echo -n "Kernel Init.d? "
-		if [ $(grep "sysinit" $ACTIVE_PROJECT/kernel/ramdisk/init.rc | wc -l) -gt 0 ]; then
+		if [ $(grep -qi "sysinit" "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"; echo $?) -eq 0 ]; then
 			echo "[YES]"
 		else
 			echo "[NO]"
