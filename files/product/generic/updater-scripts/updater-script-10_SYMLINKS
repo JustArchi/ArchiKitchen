@@ -1,8 +1,9 @@
+symlink("dumpstate", "/system/bin/dumpcrash");
 symlink("libGLESv2.so", "/system/lib/libGLESv3.so");
+symlink("logcat", "/system/bin/lolcat");
 symlink("mksh", "/system/bin/sh");
 symlink("Roboto-Bold.ttf", "/system/fonts/DroidSans-Bold.ttf");
 symlink("Roboto-Regular.ttf", "/system/fonts/DroidSans.ttf");
-symlink("dumpstate", "/system/bin/dumpcrash");
 symlink("toolbox", "/system/bin/cat");
 symlink("toolbox", "/system/bin/chcon");
 symlink("toolbox", "/system/bin/chmod");
