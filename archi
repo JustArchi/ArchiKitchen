@@ -24,26 +24,26 @@
 set +e
 
 # Initial variables
-VERSION="1.0"
+VERSION="1.0" # Unused
 TOOLS=(which whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
 XDALINK="http://forum.xda-developers.com/showthread.php?t=2597220"
 
 ACTIVE_PROJECT=""
 ARCH="unknown"
-CUSER=$(whoami)
+CUSER="$(whoami)"
 
 ALIGN=4
 FULLPERFORMANCE=true
 
 META_INF="META-INF/com/google/android"
-UPDATER_SCRIPT_HEAD="updater-script-00_HEAD"
+UPDATER_SCRIPT_HEAD="updater-script-00_HEAD" # Unused
 UPDATER_SCRIPT_SYMLINKS="updater-script-10_SYMLINKS"
 UPDATER_SCRIPT_PERMISSIONS="updater-script-20_PERMISSIONS"
-UPDATER_SCRIPT_EXEC="updater-script-80_EXEC"
-UPDATER_SCRIPT_USER="updater-script-85_USER"
+UPDATER_SCRIPT_EXEC="updater-script-80_EXEC" # Unused
+UPDATER_SCRIPT_USER="updater-script-85_USER" # Unused
 UPDATER_SCRIPT_KERNEL="updater-script-90_KERNEL"
 UPDATER_SCRIPT_MODEM="updater-script-91_MODEM"
-UPDATER_SCRIPT_TAIL="updater-script-99_TAIL"
+UPDATER_SCRIPT_TAIL="updater-script-99_TAIL" # Unused
 
 clear
 echo -n "Please wait"
@@ -52,7 +52,7 @@ echo -n "Please wait"
 MISSINGTOOLS=""
 for TOOL in "${TOOLS[@]}"; do
 	echo -n "."
-	if [ -z $(which $TOOL) ]; then
+	if [ -z "$(which $TOOL)" ]; then
 		MISSINGTOOLS+=" $TOOL"
 	fi
 done
@@ -65,20 +65,29 @@ if [ ! -z "$MISSINGTOOLS" ]; then
 	exit 1
 fi
 
-# Check LONG_BIT for determining host architecture, this is unused for a while
-HOSTARCH="$(getconf LONG_BIT)"
+# Check LONG_BIT for determining host architecture
+HOSTARCH="$(getconf LONG_BIT)" # Unused
 
 # Set common tools
 ZIPALIGN="./tools/zipalign/zipalign"
 
 # Navigate to our folder, even if user didn't execute it from the root dir
-cd $(dirname $0)
+cd "$(dirname "$0")"
 
 # Make sure our tools are executable
 # This is only required if user downloaded zip and permissions are broken (f.e. due to moving files from windows => linux)
 chmod -R 755 tools
 
-# Core
+#  _____                 _   _
+# |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
+# | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+# |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
+# |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
+#
+
+### CORE ###
+
+# Waits for user action
 PRESS_ENTER() {
 	read -p "Press [Enter] key to continue..."
 }
@@ -86,17 +95,18 @@ PRESS_ENTER() {
 # Executes commands given in arguments as root
 ROOT_EXECUTE() {
 	if [ "$CUSER" == "root" ]; then
-		$*
+		$@ # Yes, we must break on spaces in this case
 	else
 		echo "Root access is required! $@"
-		if [ ! -z $(which sudo) ]; then
-			sudo $*
+		if [ ! -z "$(which sudo)" ]; then
+			sudo $@ # Yes, we must break on spaces in this case
 		else
-			su -c $*
+			su -c $@ # Yes, we must break on spaces in this case
 		fi
 	fi
 }
 
+# Changes matching word to another one
 SED_CHANGE_WORD() {
 	# $1 - What we're changing
 	# $2 - To what we're changing
@@ -109,31 +119,18 @@ SED_CHANGE_WORD() {
 	fi
 }
 
+# Removes all lines which match the word
 GREP_DELETE_WORD() {
 	# $1 - What we're deleting
 	# $2 - File location for that
 	grep -v "$1" "$2" > "$2.tmp" && mv -f "$2.tmp" "$2"
 }
 
-# Sets ACTIVE_PROJECT
-DO_SETPROJECT() {
-	echo
-	echo "You currently don't have any active project set"
-	echo "You can open any project you've created in the past or create a new one:"
-	echo
-	echo "n - Create a new project"
-	echo "e - Use existing project"
-	echo "x - Exit"
-	read -p "Your choice: " CHOICE
-	case "$CHOICE" in
-		n|N) SET_NEWPROJECT ;;
-		e|E) SET_OLDPROJECT ;;
-		*) exit 0 ;;
-	esac
-}
-
+# Tries to mount chosen file
 TRY_MOUNT() {
-	echo "Trying to mount $(basename $1)"
+	# $1 - File to mount
+	# $2 - Directory to mount file into
+	echo "Trying to mount $(basename "$1")"
 	mkdir -p /tmp/ArchiKitchenLOOP
 	echo "Stage 1: Mounting with automatic filesystem..."
 	ROOT_EXECUTE "mount -o loop $1 $2"
@@ -143,7 +140,7 @@ TRY_MOUNT() {
 	fi
 	echo "Failed!"
 	echo "Stage 2: Checking if image is in special sparse ext4 format available for conversion..."
-	if [ $(od -A n -h -N 5 "$1" | sed 's/ //g') = "ff3aed260001" ]; then
+	if [ "$(od -A n -h -N 5 "$1" | sed 's/ //g')" = "ff3aed260001" ]; then
 		echo "Yes it is!"
 		if [ ! -x "temp/simg2img" ]; then
 			echo "Compiling simg2img..."
@@ -174,12 +171,72 @@ TRY_MOUNT() {
 	return 1
 }
 
+# Removes ACTIVE_PROJECT
 DEL_PROJECT() {
 	echo "Cleaning $ACTIVE_PROJECT"
 	rm -rf "$ACTIVE_PROJECT"
 	ACTIVE_PROJECT=""
 }
 
+# Creates new project
+SET_NEWPROJECT() {
+	clear
+	echo "Before you begin, you must specify what kind of the project you want to create"
+	echo
+	echo "b - Create a Bare Bones project"
+	echo "i - Create a ZIP-flashable ROM from stock partition image(s)"
+	echo "z - Create a ZIP-flashable ROM from other ZIP-flashable ROM"
+	echo
+	read -p "Which choice describes your case? [B/i/z]: " CHOICE
+	case "$CHOICE" in
+		i|I) NEWPROJECT_STOCK ;;
+		z|Z) NEWPROJECT_ZIP ;;
+		*) NEWPROJECT_BARE ;;
+	esac
+}
+
+# Sets ACTIVE_PROJECT
+SET_PROJECT() {
+	echo
+	echo "You currently don't have any active project set"
+	echo "You can open any project you've created in the past or create a new one:"
+	echo
+	echo "n - Create a new project"
+	echo "e - Use existing project"
+	echo "x - Exit"
+	read -p "Your choice: " CHOICE
+	case "$CHOICE" in
+		n|N) SET_NEWPROJECT ;;
+		e|E) SET_OLDPROJECT ;;
+		*) exit 0 ;;
+	esac
+}
+
+# Sets old project as active one
+SET_OLDPROJECT() {
+	clear
+	echo "Here is the list of projects you've created in the past:"
+	echo "=-=-=-=-=-=-=-=-="
+	find . -type d -iname "PROJECT_*" | while read line; do
+		basename "$line"
+	done
+	echo "=-=-=-=-=-=-=-=-="
+	echo "Write a name of any from the projects detected above or 'x' to go back"
+	read -p "Your selected project: " CHOICE
+	case "$CHOICE" in
+		x|X) return ;;
+		*)
+			if [ -d "$CHOICE" ]; then
+				ACTIVE_PROJECT="$CHOICE"
+			else
+				echo "Invalid selection"
+				PRESS_ENTER
+			fi
+		;;
+	esac
+}
+
+# Creates a new bare project
 NEWPROJECT_BARE() {
 	ACTIVE_PROJECT="PROJECT_"
 	ACTIVE_PROJECT+="$(date '+%m%d%y_%H%M%S')"
@@ -188,6 +245,7 @@ NEWPROJECT_BARE() {
 	BUILD_UPDATER_SCRIPT
 }
 
+# Creates a new stock image-based project
 NEWPROJECT_STOCK() {
 	echo "To create a ROM from stock partition images, make sure that you have:"
 	echo
@@ -290,83 +348,18 @@ NEWPROJECT_STOCK() {
 	SET_MODEM
 }
 
+# Creates a new zip-based project
 NEWPROJECT_ZIP() {
 	NEWPROJECT_BARE # TODO
 }
 
-# Creates new project
-SET_NEWPROJECT() {
-	clear
-	echo "Before you begin, you must specify what kind of the project you want to create"
-	echo
-	echo "b - Create a Bare Bones project"
-	echo "i - Create a ZIP-flashable ROM from stock partition image(s)"
-	echo "z - Create a ZIP-flashable ROM from other ZIP-flashable ROM"
-	echo
-	read -p "Which choice describes your case? [B/i/z]: " CHOICE
-	case "$CHOICE" in
-		i|I) NEWPROJECT_STOCK ;;
-		z|Z) NEWPROJECT_ZIP ;;
-		*) NEWPROJECT_BARE ;;
-	esac
-}
-
-SET_OLDPROJECT() {
-	clear
-	echo "Here is the list of projects you've created in the past:"
-	echo "=-=-=-=-=-=-=-=-="
-	find . -type d -iname "PROJECT_*" | while read line; do
-		basename "$line"
-	done
-	echo "=-=-=-=-=-=-=-=-="
-	echo "Write a name of any from the projects detected above or 'x' to go back"
-	read -p "Your selected project: " CHOICE
-	case "$CHOICE" in
-		x|X) return ;;
-		*)
-			if [ -d "$CHOICE" ]; then
-				ACTIVE_PROJECT="$CHOICE"
-			else
-				echo "Invalid selection"
-				PRESS_ENTER
-			fi
-		;;
-	esac
-}
-
-# Converts all stock images to mountable linux ones
-DO_SIMG2IMG_ALL() {
-	for f in $(find $ACTIVE_PROJECT -maxdepth 1 -type f -iname "*.ext4"); do
-		echo "Converting and mounting $(basename $f)"
-		./temp/simg2img $f $f.simg2img
-		rm -f $f
-		mkdir -p /tmp/ArchiKitchenLOOP
-		ROOT_EXECUTE "mount -o loop $f.simg2img /tmp/ArchiKitchenLOOP"
-		echo "Extracting files from $(basename $f)"
-		IMGNAME=$(basename "$f" | cut -d'.' -f1)
-		case "$IMGNAME" in
-			"cache")
-				if [ -e /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip ]; then
-					echo "Found common sec_csc.zip file, this is CSC provided by Samsung, including it"
-					ROOT_EXECUTE "unzip -q /tmp/ArchiKitchenLOOP/recovery/sec_csc.zip -d $ACTIVE_PROJECT/"
-				fi
-				;;
-			*)
-				ROOT_EXECUTE "cp -R /tmp/ArchiKitchenLOOP/* $ACTIVE_PROJECT/$IMGNAME/"
-		esac
-		ROOT_EXECUTE "umount /tmp/ArchiKitchenLOOP"
-		rm -f $f.simg2img
-	done
-	ROOT_EXECUTE "chown -hR $CUSER.$CUSER $ACTIVE_PROJECT"
-}
-
-# Sets up kernel
+# Sets kernel
 SET_KERNEL() {
-	if [ -f $ACTIVE_PROJECT/boot.img ] && ([ $(grep -qi "boot.img" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ] || [ $(grep -qi "/tmp/invalid_kernel_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -eq 0 ]); then
+	if [ -f "$ACTIVE_PROJECT/boot.img" ] && ([ "$(grep -qi "boot.img" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -ne 0 ] || [ "$(grep -qi "/tmp/invalid_kernel_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -eq 0 ]); then
 		clear
 		echo "WARNING! Kernel has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
-		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
+		local MODEL="$(grep -i "ro.product.device" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
 		if [ -z "$MODEL" ]; then
 			echo "ERROR: Could not detect ROM model, setting of kernel failed"
 			PRESS_ENTER
@@ -374,8 +367,8 @@ SET_KERNEL() {
 		fi
 		echo
 		echo "Detected ROM model: $MODEL"
-		if [ -f files/product/$MODEL/KERNEL ]; then
-			KERNELPATH=$(cat files/product/$MODEL/KERNEL)
+		if [ -f "files/product/$MODEL/KERNEL" ]; then
+			KERNELPATH="$(cat "files/product/$MODEL/KERNEL")"
 			echo "Based on detected ROM model and our little database, your kernel path should be: $KERNELPATH"
 		else
 			echo "This model does not yet exist in our database. Please fill your kernel path manually"
@@ -400,21 +393,21 @@ SET_KERNEL() {
 	fi
 }
 
-# Sets up modem
+# Sets modem
 SET_MODEM() {
-	if [ -f $ACTIVE_PROJECT/modem.bin ] && ([ $(grep -qi "modem.bin" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -ne 0 ] || [ $(grep -qi "/tmp/invalid_modem_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?) -eq 0 ]); then
+	if [ -f "$ACTIVE_PROJECT/modem.bin" ] && ([ "$(grep -qi "modem.bin" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -ne 0 ] || [ "$(grep -qi "/tmp/invalid_modem_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -eq 0 ]); then
 		clear
 		echo "WARNING! Modem has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
-		local MODEL=$(grep -i "ro.product.device" $ACTIVE_PROJECT/system/build.prop | head -n 1 | cut -d'=' -f2)
+		local MODEL="$(grep -i "ro.product.device" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
 		if [ -z "$MODEL" ]; then
 			echo "ERROR: Could not detect ROM model, setting of modem failed"
 			PRESS_ENTER
 			return 1
 		fi
 		echo "Detected ROM model: $MODEL"
-		if [ -f files/product/$MODEL/MODEM ]; then
-			MODEMPATH=$(cat files/product/$MODEL/MODEM)
+		if [ -f "files/product/$MODEL/MODEM" ]; then
+			MODEMPATH="$(cat "files/product/$MODEL/MODEM")"
 			echo "Based on detected ROM model and our little database, your modem path should be: $MODEMPATH"
 		else
 			echo "This model does not yet exist in our database. Please fill your modem path manually"
@@ -445,53 +438,43 @@ SET_MODEM() {
 	fi
 }
 
-# Compiles simg2img, if we don't have it yet
-DO_MAKESURE_WEHAVE_SIMG2IMG() {
-	if [ ! -e temp/simg2img ]; then
-		mkdir -p temp
-		gcc -O2 tools/simg2img/sparse_crc32.c tools/simg2img/simg2img.c -o temp/simg2img
-	fi
-}
-
-# Creates META-INF, if not yet available
+# Creates generic META-INF
 BUILD_META_INF() {
-	mkdir -p $ACTIVE_PROJECT/$META_INF
-	cp files/product/generic/update-binary $ACTIVE_PROJECT/$META_INF/update-binary
-	for UPDATER_SCRIPT in files/product/generic/updater-scripts/*; do
+	mkdir -p "$ACTIVE_PROJECT/$META_INF"
+	cp files/product/generic/update-binary "$ACTIVE_PROJECT/$META_INF/update-binary"
+	for UPDATER_SCRIPT in "files/product/generic/updater-scripts/"*; do
 		cp "$UPDATER_SCRIPT" "$ACTIVE_PROJECT/$META_INF/"
 	done
 }
 
-# Adds updater-scripts from $1 to our ACTIVE_PROJECT
+# Merges updater-scripts from $1 to our ACTIVE_PROJECT
 UPDATER_SCRIPT_ADD() {
 	local FOLDER="$1"
 	local FILE=""
-	for UPDATER_SCRIPT in $FOLDER/updater-script-*; do
-		FILE=$(basename $UPDATER_SCRIPT)
-		echo "" >> $ACTIVE_PROJECT/$META_INF/$FILE # This is to ensure that we have a new line BEFORE appending"
-		cat "$UPDATER_SCRIPT" >> $ACTIVE_PROJECT/$META_INF/$FILE
-		echo "" >> $ACTIVE_PROJECT/$META_INF/$FILE # This is to ensure that we have a new line AFTER appending"
-		sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/$FILE # This removes safety lines added above
+	for UPDATER_SCRIPT in "$FOLDER/updater-script-"*; do
+		FILE="$(basename "$UPDATER_SCRIPT")"
+		echo "" >> "$ACTIVE_PROJECT/$META_INF/$FILE" # This is to ensure that we have a new line BEFORE appending"
+		cat "$UPDATER_SCRIPT" >> "$ACTIVE_PROJECT/$META_INF/$FILE"
+		echo "" >> "$ACTIVE_PROJECT/$META_INF/$FILE" # This is to ensure that we have a new line AFTER appending"
+		sed -i '/^$/d' "$ACTIVE_PROJECT/$META_INF/$FILE" # This removes safety lines added above
 	done
 }
 
-# Removes updater-scripts from $1 from our ACTIVE_PROJECT
+# Reverts merge of updater-scripts from $1 in our ACTIVE_PROJECT
 UPDATER_SCRIPT_DEL() {
-	local UNIQUECHAR="!"
 	local FOLDER="$1"
 	local FILE=""
-	local CMD=""
-	for UPDATER_SCRIPT in $FOLDER/updater-script-*; do
+	for UPDATER_SCRIPT in "$FOLDER/updater-script-"*; do
 		# TODO: I know that this is slow and inefficient way, however at least I can prove that it's stable and secure
 		# If anybody manages to delete lines from $ACTIVE_PROJECT/$META_INF/$FILE, which exist in $UPDATER_SCRIPT, please contribute! :)
 		# Unfortunately I failed using sed, so I'm out of better ideas :(
-		FILE=$(basename $UPDATER_SCRIPT)
+		FILE="$(basename "$UPDATER_SCRIPT")"
 		echo -n "" > "$ACTIVE_PROJECT/$FILE"
-		cat "$ACTIVE_PROJECT/$META_INF/$FILE" | while read line; do
-			if [ $(grep -q "$line" "$UPDATER_SCRIPT"; echo $?) -eq 1 ]; then
+		while read line; do
+			if [ "$(grep -q "$line" "$UPDATER_SCRIPT"; echo $?)" -eq 1 ]; then
 				echo "$line" >> "$ACTIVE_PROJECT/$FILE"
 			fi
-		done
+		done < "$ACTIVE_PROJECT/$META_INF/$FILE"
 		mv -f "$ACTIVE_PROJECT/$FILE" "$ACTIVE_PROJECT/$META_INF/$FILE"
 	done
 }
@@ -499,17 +482,16 @@ UPDATER_SCRIPT_DEL() {
 # Builds final updater-script from our segments
 BUILD_UPDATER_SCRIPT() {
 	local HEADER=""
-	echo -n "" > $ACTIVE_PROJECT/$META_INF/updater-script
-	for UPDATER_SCRIPT in $ACTIVE_PROJECT/$META_INF/updater-script-*; do
-		HEADER="# "
-		HEADER+=$(basename "$UPDATER_SCRIPT")
-		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line BEFORE appending"
+	echo -n "" > "$ACTIVE_PROJECT/$META_INF/updater-script"
+	for UPDATER_SCRIPT in "$ACTIVE_PROJECT/$META_INF/updater-script-"*; do
+		HEADER="# $(basename "$UPDATER_SCRIPT")"
+		echo "" >> "$ACTIVE_PROJECT/$META_INF/updater-script" # This is to ensure that we have a new line BEFORE appending"
 		echo "$HEADER" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
 		cat "$UPDATER_SCRIPT" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
-		echo "" >> $ACTIVE_PROJECT/$META_INF/updater-script # This is to ensure that we have a new line AFTER appending"
+		echo "" >> "$ACTIVE_PROJECT/$META_INF/updater-script" # This is to ensure that we have a new line AFTER appending"
 	done
 
-	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/updater-script # This removes safety lines added above
+	sed -i '/^$/d' "$ACTIVE_PROJECT/$META_INF/updater-script" # This removes safety lines added above
 	GREP_DELETE_WORD "/tmp/invalid" "$ACTIVE_PROJECT/$META_INF/updater-script" "^" # This is to ensure that we won't pollute our updater-script with invalid paths for kernel or modem
 }
 
@@ -521,27 +503,28 @@ FIX_PERMISSIONS() {
 	case "$CHOICE" in
 		n|N) ;;
 		*)
-			cp $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS $ACTIVE_PROJECT/updater-script-TEMP
-			rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-			for perm in $(cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS | cut -d'"' -f2); do
+			cp "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS" "$ACTIVE_PROJECT/updater-script-TEMP"
+			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+			while read perm; do
+				perm="$(echo "$perm" | cut -d'"' -f2)"
 				if [ -z "$perm" ]; then
 					continue
-				elif [ ! -e $ACTIVE_PROJECT$perm ]; then
-					echo $perm >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
-					grep -Ev "$perm" $ACTIVE_PROJECT/updater-script-TEMP > $ACTIVE_PROJECT/updater-script-TEMP2
-					mv -f $ACTIVE_PROJECT/updater-script-TEMP2 $ACTIVE_PROJECT/updater-script-TEMP
+				elif [ ! -e "$ACTIVE_PROJECT$perm" ]; then
+					echo "$perm" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+					grep -v "$perm" "$ACTIVE_PROJECT/updater-script-TEMP" > "$ACTIVE_PROJECT/updater-script-TEMP2"
+					mv -f "$ACTIVE_PROJECT/updater-script-TEMP2" "$ACTIVE_PROJECT/updater-script-TEMP"
 				fi
-			done
-			if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
+			done < "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS"
+			if [ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]; then
 				echo "No invalid permissions found, your updater-script is clean!"
-				rm -f $ACTIVE_PROJECT/updater-script-TEMP
+				rm -f "$ACTIVE_PROJECT/updater-script-TEMP"
 			else
 				echo "OK, permissions for following files have been removed from your updater-script: "
 				echo "-=-= REMOVED PERMISSIONS START =-=-"
-				cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				cat "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 				echo "-=-= REMOVED PERMISSIONS EOF =-=-"
-				rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-				mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS
+				rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+				mv -f "$ACTIVE_PROJECT/updater-script-TEMP" "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS"
 			fi
 			PRESS_ENTER
 	esac
@@ -555,27 +538,30 @@ FIX_SYMLINKS() {
 	case "$CHOICE" in
 		n|N) ;;
 		*)
-			cp $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS $ACTIVE_PROJECT/updater-script-TEMP
-			rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-			for symlink in $(cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS | cut -d'"' -f2); do
+			cp "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS" "$ACTIVE_PROJECT/updater-script-TEMP"
+			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+			local SYMLINKDIR=""
+			while read SYMLINK; do
+				SYMLINKDIR="$(dirname "$(echo "$SYMLINK" | cut -d'"' -f4)")"
+				SYMLINK="$(echo "$SYMLINK" | cut -d'"' -f2)"
 				if [ -z "$line" ]; then
 					continue
-				elif [ ! -e $ACTIVE_PROJECT$symlink ] && [ ! -e $ACTIVE_PROJECT/system/bin/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/xbin/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/lib/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/ttf/$symlink ] ; then
-					echo $symlink >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
-					grep -Ev "$symlink" $ACTIVE_PROJECT/updater-script-TEMP > $ACTIVE_PROJECT/updater-script-TEMP2
-					mv -f $ACTIVE_PROJECT/updater-script-TEMP2 $ACTIVE_PROJECT/updater-script-TEMP
+				elif [ ! -e "$ACTIVE_PROJECT$SYMLINK" ] && [ ! -e "$ACTIVE_PROJECT$SYMLINKDIR/$SYMLINK" ]; then
+					echo "$SYMLINK" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+					grep -v "$SYMLINK" "$ACTIVE_PROJECT/updater-script-TEMP" > "$ACTIVE_PROJECT/updater-script-TEMP2"
+					mv -f "$ACTIVE_PROJECT/updater-script-TEMP2" "$ACTIVE_PROJECT/updater-script-TEMP"
 				fi
-			done
-			if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
+			done < "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+			if [ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]; then
 				echo "No invalid symlinks found, your updater-script is clean!"
-				rm -f $ACTIVE_PROJECT/updater-script-TEMP
+				rm -f "$ACTIVE_PROJECT/updater-script-TEMP"
 			else
 				echo "OK, symlinks for following files have been removed from your updater-script: "
 				echo "-=-= REMOVED SYMLINKS START =-=-"
-				cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				cat "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 				echo "-=-= REMOVED SYMLINKS EOF =-=-"
-				rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-				mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
+				rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+				mv -f "$ACTIVE_PROJECT/updater-script-TEMP" "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
 			fi
 			PRESS_ENTER
 			echo ""
@@ -589,23 +575,23 @@ FIX_SYMLINKS() {
 		*)
 			local TARGET=""
 			local REALPATH=""
-			rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
-			echo "" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
-			for symlink in $(find $ACTIVE_PROJECT/ -type l | sort); do
-				TARGET=$(readlink $symlink)
+			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+			echo "" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+			find "$ACTIVE_PROJECT/" -type l | sort | while read SYMLINK; do
+				TARGET="$(readlink "$SYMLINK")"
 				REALPATH="/" # TODO: We can assume that we have only one slash (/) before the right pattern ($ACTIVE_PROJECT)
-				REALPATH+=$(echo $symlink | cut -d'/' -f2-) # If there's a way to determine that without making such assumption, it would be great
-				echo "symlink(\""$TARGET"\", \""$REALPATH"\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
-				echo "$REALPATH -> $TARGET" >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				REALPATH+="$(echo "$SYMLINK "| cut -d'/' -f2-)" # If there's a way to determine that without making such assumption, it would be great
+				echo "symlink(\"$TARGET\", \"$REALPATH"");" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+				echo "$REALPATH -> $TARGET" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			done
-			if [ ! -e $ACTIVE_PROJECT/updater-script-TEMP-LIST ]; then
+			if [ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]; then
 				echo "No local symlinks found, it looks like your build is not based on stock image"
 			else
 				echo "OK, following local symlinks have been added to your updater-script: "
 				echo "-=-= ADDED SYMLINKS START =-=-"
-				cat $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				cat "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 				echo "-=-= ADDED SYMLINKS EOF =-=-"
-				rm -f $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			fi
 			PRESS_ENTER
 			echo ""
@@ -613,19 +599,19 @@ FIX_SYMLINKS() {
 
 	echo "Please wait..."
 	# Remove duplicated symlinks and sort them
-	cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS | sort -u > $ACTIVE_PROJECT/updater-script-TEMP
-	mv -f $ACTIVE_PROJECT/updater-script-TEMP $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
+	sort -u < "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS" > "$ACTIVE_PROJECT/updater-script-TEMP"
+	mv -f "$ACTIVE_PROJECT/updater-script-TEMP" "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
 
 	# Remove local symlinks, we don't need them to pollute our ROM
-	find $ACTIVE_PROJECT/ -type l -delete
+	find "$ACTIVE_PROJECT/" -type l -delete
 
 	# Remove empty lines, if any
-	sed -i '/^$/d' $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
+	sed -i '/^$/d' "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
 }
 
 # Extracts the kernel
 KERNEL_EXTRACT() {
-	if [ ! -e $ACTIVE_PROJECT/kernel ]; then
+	if [ ! -e "$ACTIVE_PROJECT/kernel" ]; then
 		mkdir -p temp
 		if [ ! -e temp/mkbootimg ]; then
 			cd tools/kernel/mkbootimg
@@ -640,13 +626,13 @@ KERNEL_EXTRACT() {
 			make clean
 			cd ../../..
 		fi
-		if [ -e $ACTIVE_PROJECT/boot.img ]; then
-			rm -rf $ACTIVE_PROJECT/kernel
-			mkdir -p $ACTIVE_PROJECT/kernel
-			temp/unpackbootimg -i $ACTIVE_PROJECT/boot.img -o $ACTIVE_PROJECT/kernel
-			mkdir -p $ACTIVE_PROJECT/kernel/ramdisk
-			if [ -e $ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz ]; then
-				cd $ACTIVE_PROJECT/kernel/ramdisk
+		if [ -e "$ACTIVE_PROJECT/boot.img" ]; then
+			rm -rf "$ACTIVE_PROJECT/kernel"
+			mkdir -p "$ACTIVE_PROJECT/kernel"
+			temp/unpackbootimg -i "$ACTIVE_PROJECT/boot.img" -o "$ACTIVE_PROJECT/kernel"
+			mkdir -p "$ACTIVE_PROJECT/kernel/ramdisk"
+			if [ -e "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" ]; then
+				cd "$ACTIVE_PROJECT/kernel/ramdisk"
 				#TODO: Handle non-gz ramdisk as well, but not now...
 				gunzip -c ../boot.img-ramdisk.gz | cpio -i
 				cd ../../..
@@ -661,17 +647,17 @@ KERNEL_EXTRACT() {
 
 # Repacks the kernel from previously extracted one
 KERNEL_REPACK() {
-	if [ -e $ACTIVE_PROJECT/kernel ]; then
-		if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
-			cd $ACTIVE_PROJECT/kernel/ramdisk
+	if [ -e "$ACTIVE_PROJECT/kernel" ]; then
+		if [ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
+			cd "$ACTIVE_PROJECT/kernel/ramdisk"
 			find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
 			cd ../../..
-			temp/mkbootimg --kernel $ACTIVE_PROJECT/kernel/boot.img-zImage --ramdisk $ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.* -o $ACTIVE_PROJECT/temp.img
+			temp/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" --ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW."* -o "$ACTIVE_PROJECT/temp.img"
 		else
-			temp/mkbootimg --kernel $ACTIVE_PROJECT/kernel/boot.img-zImage --ramdisk $ACTIVE_PROJECT/kernel/boot.img-ramdisk.* -o $ACTIVE_PROJECT/temp.img
+			temp/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" --ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk."* -o "$ACTIVE_PROJECT/temp.img"
 		fi
-		mv -f $ACTIVE_PROJECT/temp.img $ACTIVE_PROJECT/boot.img
-		rm -rf $ACTIVE_PROJECT/kernel
+		mv -f "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
+		rm -rf "$ACTIVE_PROJECT/kernel"
 	fi
 }
 
@@ -681,20 +667,7 @@ KERNEL_ABORT() {
 	rm -f $ACTIVE_PROJECT/temp.img
 }
 
-# Adds ArchiDroid's Init.d
-ARCHIDROID_INITD() {
-	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
-		mv -f $ACTIVE_PROJECT/system/bin/debuggerd $ACTIVE_PROJECT/system/bin/debuggerd.real
-		cp -R files/archidroid/initd/system/* $ACTIVE_PROJECT/system/
-		UPDATER_SCRIPT_ADD "files/archidroid/initd/updater-scripts"
-	else
-		mv -f $ACTIVE_PROJECT/system/bin/debuggerd.real $ACTIVE_PROJECT/system/bin/debuggerd
-		UPDATER_SCRIPT_DEL "files/archidroid/initd/updater-scripts"
-	fi
-	BUILD_UPDATER_SCRIPT
-}
-
-# Adds Init.d
+# Adds kernel's Init.d
 INITD() {
 	KERNEL_EXTRACT
 	if [ -e kernel/ramdisk/init.rc ]; then
@@ -711,6 +684,7 @@ INITD() {
 	fi
 }
 
+# Builds ROM
 BUILD() {
 	local IGNOREDFILES="$META_INF/updater-script-*"
 	local EXPERT=false
@@ -768,6 +742,7 @@ BUILD() {
 	exit 0
 }
 
+# Deodexes every .odex file
 DEODEX() {
 	local API=$(grep "ro.build.version.sdk" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
 	echo "Detected API level $API"
@@ -828,12 +803,14 @@ DEODEX() {
 	PRESS_ENTER
 }
 
+# Zipaligns single app
 ZIPALIGN_APK() {
 	echo "Zipaligning $(basename "$1")..."
 	"$ZIPALIGN" -f "$ALIGN" "$1" "$1.zipaligned" >/dev/null 2>&1 && mv -f "$1.zipaligned" "$1"
 	return $?
 }
 
+# Zipaligns everything
 ZIPALIGN() {
 	if ($FULLPERFORMANCE); then
 		for APK in $(find $ACTIVE_PROJECT/system -type f -iname "*.apk"); do
@@ -850,6 +827,20 @@ ZIPALIGN() {
 	PRESS_ENTER
 }
 
+# Adds or removes ArchiDroid's Init.d
+ARCHIDROID_INITD() {
+	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
+		mv -f $ACTIVE_PROJECT/system/bin/debuggerd $ACTIVE_PROJECT/system/bin/debuggerd.real
+		cp -R files/archidroid/initd/system/* $ACTIVE_PROJECT/system/
+		UPDATER_SCRIPT_ADD "files/archidroid/initd/updater-scripts"
+	else
+		mv -f $ACTIVE_PROJECT/system/bin/debuggerd.real $ACTIVE_PROJECT/system/bin/debuggerd
+		UPDATER_SCRIPT_DEL "files/archidroid/initd/updater-scripts"
+	fi
+	BUILD_UPDATER_SCRIPT
+}
+
+# Adds or removes root
 ROOT() {
 	if [ ! -e $ACTIVE_PROJECT/system/xbin/su ]; then
 		mkdir -p $ACTIVE_PROJECT/system/xbin
@@ -871,6 +862,7 @@ ROOT() {
 	BUILD_UPDATER_SCRIPT
 }
 
+# Adds or removes custom bootanimation
 BOOTANIMATION() {
 	if [ ! -e $ACTIVE_PROJECT/system/media/bootanimation.zip ]; then
 		mv -f $ACTIVE_PROJECT/system/bin/bootanimation $ACTIVE_PROJECT/system/bin/bootanimation.orig
@@ -882,6 +874,7 @@ BOOTANIMATION() {
 	fi
 }
 
+# Adds or removes busybox
 BUSYBOX() {
 	if [ ! -e $ACTIVE_PROJECT/system/xbin/busybox ]; then
 		mkdir -p $ACTIVE_PROJECT/system/xbin
@@ -894,6 +887,7 @@ BUSYBOX() {
 	BUILD_UPDATER_SCRIPT
 }
 
+# Adds or removes insecure ADB
 ADB() {
 	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
 		if [ $(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?) -eq 0 ]; then
@@ -906,6 +900,7 @@ ADB() {
 	fi
 }
 
+# Prints banner
 PRINT_BANNER() {
 	echo "    _             _     _ _  ___ _       _"
 	echo "   / \   _ __ ___| |__ (_) |/ (_) |_ ___| |__   ___ _ __"
@@ -918,6 +913,7 @@ PRINT_BANNER() {
 	echo "--------------------------------------------------------------------------------"
 }
 
+# Prints status of the project
 PRINT_PROJECT_STATUS() {
 	ALLFINE=true
 	if [ -d $ACTIVE_PROJECT/kernel ]; then
@@ -941,6 +937,7 @@ PRINT_PROJECT_STATUS() {
 	echo "--------------------------------------------------------------------------------"
 }
 
+# Prints status of the ROM
 PRINT_ROM_STATUS() {
 	echo -n "Architecture: ["
 	if [ "$ARCH" = "unknown" ] && [ -f "$ACTIVE_PROJECT/system/build.prop" ]; then
@@ -1011,6 +1008,7 @@ PRINT_ROM_STATUS() {
 	echo "--------------------------------------------------------------------------------"
 }
 
+# Prints available switches
 PRINT_SWITCHES() {
 	echo "adi - Enable/Disable ArchiDroid Init.d (software debuggerd hook)"
 	echo
@@ -1038,6 +1036,7 @@ PRINT_SWITCHES() {
 	echo "--------------------------------------------------------------------------------"
 }
 
+# Prints settings of the kitchen
 PAGE_SETTINGS() {
 	while :; do
 		clear
@@ -1073,15 +1072,6 @@ PAGE_SETTINGS() {
 	done
 }
 
-################################################################
-#  ____  _____ ____  ____  _____ ____    _  _____ _____ ____   #
-# |  _ \| ____|  _ \|  _ \| ____/ ___|  / \|_   _| ____|  _ \  #
-# | | | |  _| | |_) | |_) |  _|| |     / _ \ | | |  _| | | | | #
-# | |_| | |___|  __/|  _ <| |__| |___ / ___ \| | | |___| |_| | #
-# |____/|_____|_|   |_| \_\_____\____/_/   \_\_| |_____|____/  #
-#                                                              #
-################################################################
-
 ############################
 #   ____ ___  ____  _____  #
 #  / ___/ _ \|  _ \| ____| #
@@ -1096,7 +1086,7 @@ while :; do
 	PRINT_BANNER
 
 	if [ -z "$ACTIVE_PROJECT" ]; then
-		DO_SETPROJECT
+		SET_PROJECT
 		continue
 	fi
 
@@ -1129,3 +1119,5 @@ while :; do
 		x|X) exit 0
 	esac
 done
+
+exit 0
