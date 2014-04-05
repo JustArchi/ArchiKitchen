@@ -540,15 +540,18 @@ FIX_SYMLINKS() {
 		*)
 			cp "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS" "$ACTIVE_PROJECT/updater-script-TEMP"
 			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
-			for symlink in $(cat $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS | cut -d'"' -f2); do
-				if [ -z "$symlink" ]; then
+			local SYMLINKDIR=""
+			while read SYMLINK; do
+				SYMLINKDIR="$(dirname "$(echo "$SYMLINK" | cut -d'"' -f4)")"
+				SYMLINK="$(echo "$SYMLINK" | cut -d'"' -f2)"
+				if [ -z "$SYMLINK" ]; then
 					continue
-				elif [ ! -e $ACTIVE_PROJECT$symlink ] && [ ! -e $ACTIVE_PROJECT/system/bin/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/xbin/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/lib/$symlink ] && [ ! -e $ACTIVE_PROJECT/system/ttf/$symlink ] ; then
-					echo $symlink >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
-					grep -Ev "$symlink" $ACTIVE_PROJECT/updater-script-TEMP > $ACTIVE_PROJECT/updater-script-TEMP2
-					mv -f $ACTIVE_PROJECT/updater-script-TEMP2 $ACTIVE_PROJECT/updater-script-TEMP
+				elif [ ! -e "$ACTIVE_PROJECT$SYMLINK" ] && [ ! -e "$ACTIVE_PROJECT$SYMLINKDIR/$SYMLINK" ]; then
+					echo "$SYMLINK" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+					grep -v "$SYMLINK" "$ACTIVE_PROJECT/updater-script-TEMP" > "$ACTIVE_PROJECT/updater-script-TEMP2"
+					mv -f "$ACTIVE_PROJECT/updater-script-TEMP2" "$ACTIVE_PROJECT/updater-script-TEMP"
 				fi
-			done
+			done < "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
 			if [ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]; then
 				echo "No invalid symlinks found, your updater-script is clean!"
 				rm -f "$ACTIVE_PROJECT/updater-script-TEMP"
@@ -574,12 +577,12 @@ FIX_SYMLINKS() {
 			local REALPATH=""
 			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			echo "" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
-			for symlink in $(find $ACTIVE_PROJECT/ -type l | sort); do
-				TARGET=$(readlink $symlink)
+			find "$ACTIVE_PROJECT/" -type l | sort | while read SYMLINK; do
+				TARGET="$(readlink $SYMLINK)"
 				REALPATH="/" # TODO: We can assume that we have only one slash (/) before the right pattern ($ACTIVE_PROJECT)
-				REALPATH+=$(echo $symlink | cut -d'/' -f2-) # If there's a way to determine that without making such assumption, it would be great
-				echo "symlink(\""$TARGET"\", \""$REALPATH"\");" >> $ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS
-				echo "$REALPATH -> $TARGET" >> $ACTIVE_PROJECT/updater-script-TEMP-LIST
+				REALPATH+="$(echo $SYMLINK | cut -d'/' -f2-)" # If there's a way to determine that without making such assumption, it would be great
+				echo "symlink(\"$TARGET\", \"$REALPATH\");" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+				echo "$REALPATH -> $TARGET" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			done
 			if [ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]; then
 				echo "No local symlinks found, it looks like your build is not based on stock image"
