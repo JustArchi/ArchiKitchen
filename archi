@@ -33,7 +33,7 @@ ARCH="unknown"
 CUSER="$(whoami)"
 
 ALIGN=4
-FULLPERFORMANCE=true
+FULLPERFORMANCE=1
 
 META_INF="META-INF/com/google/android"
 UPDATER_SCRIPT_HEAD="updater-script-00_HEAD" # Unused
@@ -133,7 +133,7 @@ TRY_MOUNT() {
 	echo "Trying to mount $(basename "$1")"
 	mkdir -p /tmp/ArchiKitchenLOOP
 	echo "Stage 1: Mounting with automatic filesystem..."
-	ROOT_EXECUTE "mount -o loop $1 $2"
+	ROOT_EXECUTE "mount -t auto -o loop $1 $2"
 	if [ $? -eq 0 ]; then
 		echo "Success!"
 		return 0
@@ -150,12 +150,12 @@ TRY_MOUNT() {
 		echo "Converting sparse image to image..."
 		./temp/simg2img "$1" "$1".simg2img
 		if [ $? -ne 0 ]; then
-			echo "Convertion failed"
+			echo "Conversion failed"
 			PRESS_ENTER
 		else
 			mv -f "$1".simg2img "$1"
 			echo "Mounting converted image..."
-			ROOT_EXECUTE "mount -o loop $1 $2"
+			ROOT_EXECUTE "mount -t auto -o loop $1 $2"
 			if [ $? -eq 0 ]; then
 				echo "Success!"
 				return 0
@@ -581,7 +581,7 @@ FIX_SYMLINKS() {
 				TARGET="$(readlink "$SYMLINK")"
 				REALPATH="/" # TODO: We can assume that we have only one slash (/) before the right pattern ($ACTIVE_PROJECT)
 				REALPATH+="$(echo "$SYMLINK "| cut -d'/' -f2-)" # If there's a way to determine that without making such assumption, it would be great
-				echo "symlink(\"$TARGET\", \"$REALPATH"");" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+				echo "symlink(\"$TARGET\", \"$REALPATH\");" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
 				echo "$REALPATH -> $TARGET" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			done
 			if [ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]; then
@@ -663,8 +663,8 @@ KERNEL_REPACK() {
 
 # Aborts kernel repacking
 KERNEL_ABORT() {
-	rm -rf $ACTIVE_PROJECT/kernel
-	rm -f $ACTIVE_PROJECT/temp.img
+	rm -rf "$ACTIVE_PROJECT/kernel"
+	rm -f "$ACTIVE_PROJECT/temp.img"
 }
 
 # Adds kernel's Init.d
@@ -674,7 +674,7 @@ INITD() {
 		sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' kernel/ramdisk/init.rc
 		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' kernel/ramdisk/init.rc
 		KERNEL_REPACK
-		cp -R files/initd/system/* $ACTIVE_PROJECT/system/
+		cp -R files/initd/system/* "$ACTIVE_PROJECT/system/"
 		UPDATER_SCRIPT_ADD "files/initd/updater-scripts"
 	else
 		echo "ERROR, no init.rc found?!"
@@ -686,15 +686,14 @@ INITD() {
 
 # Builds ROM
 BUILD() {
-	local IGNOREDFILES="$META_INF/updater-script-*"
-	local EXPERT=false
-	for ARG in $@; do
+	local EXPERT=0
+	for ARG in "$@"; do
 		case "$ARG" in
 			"EXPERT")
-				EXPERT=true
+				EXPERT=1
 		esac
 	done
-	if !($EXPERT); then
+	if [ "$EXPERT" -eq 0 ]; then
 		FIX_PERMISSIONS
 		FIX_SYMLINKS
 		BUILD_UPDATER_SCRIPT
@@ -703,7 +702,7 @@ BUILD() {
 		echo "Are you ready?"
 		PRESS_ENTER
 		echo "-=-= UPDATER-SCRIPT START =-=-"
-		cat $ACTIVE_PROJECT/$META_INF/updater-script
+		cat "$ACTIVE_PROJECT/$META_INF/updater-script"
 		echo "-=-= UPDATER-SCRIPT EOF =-=-"
 		read -p "Are you REALLY sure that above updater-script is correct? ESPECIALLY block-based paths? [Y/n]: " CHOICE
 		case "$CHOICE" in
@@ -724,17 +723,17 @@ BUILD() {
 	case "$CHOICE" in
 		[0-9]) COMPLEVEL="$CHOICE"
 	esac
-	cd $ACTIVE_PROJECT
-	zip -ry -$COMPLEVEL $ACTIVE_PROJECT.zip . -x $IGNOREDFILES
+	cd "$ACTIVE_PROJECT"
+	zip -ry -"$COMPLEVEL" "$ACTIVE_PROJECT.zip" . -x "$META_INF/updater-script-"*
 	cd ..
 	mkdir -p OUTPUT_ZIP
-	mv -f $ACTIVE_PROJECT/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$ACTIVE_PROJECT.zip
+	mv -f "$ACTIVE_PROJECT/$ACTIVE_PROJECT.zip" "OUTPUT_ZIP/$ACTIVE_PROJECT.zip"
 	echo "Done, your ROM is available in OUTPUT_ZIP/$ACTIVE_PROJECT.zip"
 	read -p "Rename it? [N/y]: " CHOICE
 	case "$CHOICE" in
 		y|Y)
 			read -p "New name: " NAME
-			mv -f OUTPUT_ZIP/$ACTIVE_PROJECT.zip OUTPUT_ZIP/$NAME
+			mv -f "OUTPUT_ZIP/$ACTIVE_PROJECT.zip" "OUTPUT_ZIP/$NAME"
 	esac
 	echo "All done, your ROM should be ready!"
 	echo "Thank you for using ArchiKitchen!"
@@ -744,7 +743,7 @@ BUILD() {
 
 # Deodexes every .odex file
 DEODEX() {
-	local API=$(grep "ro.build.version.sdk" $ACTIVE_PROJECT/system/build.prop | cut -d'=' -f2)
+	local API="$(grep "ro.build.version.sdk" "$ACTIVE_PROJECT/system/build.prop" | cut -d'=' -f2)"
 	echo "Detected API level $API"
 	echo "Usually you don't want to change this value"
 	read -p "Change it? [N/y]: " CHOICE
@@ -758,12 +757,12 @@ DEODEX() {
 			PRESS_ENTER
 			return 1
 	esac
-	for f in $(find $ACTIVE_PROJECT -type f -iname "*.odex"); do
-		local FILE=$(basename $f)
-		local FILEDIR=$(dirname $f)
+	find "$ACTIVE_PROJECT" -type f -iname "*.odex" | while read line; do
+		local FILE="$(basename "$line")"
+		local FILEDIR="$(dirname "$line")"
 		echo "Deodexing $FILE"
 		echo "Disassembling $FILE..."
-		java -Xmx512m -jar tools/smali/baksmali.jar -a $API -d $ACTIVE_PROJECT/system/framework -x $FILEDIR/$FILE
+		java -Xmx512m -jar tools/smali/baksmali.jar -a "$API" -d "$ACTIVE_PROJECT/system/framework" -x "$FILEDIR/$FILE"
 		if [ $? -ne 0 ]; then
 			echo "ERROR DEODEXING $FILE, ABORTING!"
 			rm -rf out
@@ -771,32 +770,32 @@ DEODEX() {
 			return 1
 		fi
 		echo "Assembling into classes.dex..."
-		java -Xmx512m -jar tools/smali/smali.jar -a $API -o classes.dex out
+		java -Xmx512m -jar tools/smali/smali.jar -a "$API" -o classes.dex out
 		if [ ! -e classes.dex ]; then
 			echo "ERROR DEODEXING $FILE, ABORTING!"
 			rm -rf out
 			PRESS_ENTER
 			return 1
 		fi
-		FILE=$(echo $FILE | rev | cut -d'.' -f2- | rev)
-		local FOUND=false
+		FILE="$(echo "$FILE" | rev | cut -d'.' -f2- | rev)"
+		local FOUND=0
 		for EXTENSION in "jar" "apk"; do
-			if [ -e $FILEDIR/$FILE.$EXTENSION ]; then
+			if [ -e "$FILEDIR/$FILE.$EXTENSION" ]; then
 				echo "Packing back into $FILE.$EXTENSION..."
-				zip -rq $FILEDIR/$FILE.$EXTENSION classes.dex
+				zip -rq "$FILEDIR/$FILE.$EXTENSION" classes.dex
 				rm -f classes.dex
-				FOUND=true
+				FOUND=1
 				break
 			fi
 		done
-		if (! $FOUND); then
+		if [ "$FOUND" -eq 0 ]; then
 			echo "ERROR, No output found?!"
 			rm -rf out
 			rm -f classes.dex
 			PRESS_ENTER
 			return 1
 		fi
-		rm -f $f
+		rm -f "$line"
 		rm -rf out
 	done
 	echo "Deodexing finished"
@@ -812,13 +811,14 @@ ZIPALIGN_APK() {
 
 # Zipaligns everything
 ZIPALIGN() {
-	if ($FULLPERFORMANCE); then
-		for APK in $(find $ACTIVE_PROJECT/system -type f -iname "*.apk"); do
+	if [ "$FULLPERFORMANCE" -eq 1 ]; then
+		find "$ACTIVE_PROJECT/system" -type f -iname "*.apk" | while read APK; do
 			ZIPALIGN_APK "$APK" &
 		done
 		wait
+		sleep 1
 	else
-		for APK in $(find $ACTIVE_PROJECT/system -type f -iname "*.apk"); do
+		find "$ACTIVE_PROJECT/system" -type f -iname "*.apk" | while read APK; do
 			ZIPALIGN_APK "$APK"
 		done
 	fi
@@ -829,12 +829,12 @@ ZIPALIGN() {
 
 # Adds or removes ArchiDroid's Init.d
 ARCHIDROID_INITD() {
-	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
-		mv -f $ACTIVE_PROJECT/system/bin/debuggerd $ACTIVE_PROJECT/system/bin/debuggerd.real
-		cp -R files/archidroid/initd/system/* $ACTIVE_PROJECT/system/
+	if [ ! -e "$ACTIVE_PROJECT/system/bin/debuggerd.real" ]; then
+		mv -f "$ACTIVE_PROJECT/system/bin/debuggerd" "$ACTIVE_PROJECT/system/bin/debuggerd.real"
+		cp -R files/archidroid/initd/system/* "$ACTIVE_PROJECT/system/"
 		UPDATER_SCRIPT_ADD "files/archidroid/initd/updater-scripts"
 	else
-		mv -f $ACTIVE_PROJECT/system/bin/debuggerd.real $ACTIVE_PROJECT/system/bin/debuggerd
+		mv -f "$ACTIVE_PROJECT/system/bin/debuggerd.real" "$ACTIVE_PROJECT/system/bin/debuggerd"
 		UPDATER_SCRIPT_DEL "files/archidroid/initd/updater-scripts"
 	fi
 	BUILD_UPDATER_SCRIPT
@@ -842,21 +842,16 @@ ARCHIDROID_INITD() {
 
 # Adds or removes root
 ROOT() {
-	if [ ! -e $ACTIVE_PROJECT/system/xbin/su ]; then
-		mkdir -p $ACTIVE_PROJECT/system/xbin
-		cp -R files/root/system/* $ACTIVE_PROJECT/system/
-		cp -R files/root/$ARCH/* $ACTIVE_PROJECT/
-		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/xbin/daemonsu
-		mkdir -p $ACTIVE_PROJECT/system/bin/.ext
-		cp $ACTIVE_PROJECT/system/xbin/su $ACTIVE_PROJECT/system/bin/.ext/.su
+	if [ ! -e "$ACTIVE_PROJECT/system/xbin/su" ]; then
+		mkdir -p "$ACTIVE_PROJECT/system/xbin"
+		cp -R files/root/system/* "$ACTIVE_PROJECT/system/"
+		cp -R "files/root/$ARCH/"* "$ACTIVE_PROJECT/"
+		cp "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/xbin/daemonsu"
+		mkdir -p "$ACTIVE_PROJECT/system/bin/.ext"
+		cp "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/bin/.ext/.su"
 		UPDATER_SCRIPT_ADD "files/root/updater-scripts"
 	else
-		rm -f $ACTIVE_PROJECT/system/app/Superuser.apk
-		rm -f $ACTIVE_PROJECT/system/xbin/su
-		rm -f $ACTIVE_PROJECT/system/xbin/daemonsu
-		rm -f $ACTIVE_PROJECT/system/bin/.ext/.su
-		rm -f $ACTIVE_PROJECT/system/etc/init.d/99SuperSUDaemon
-		rm -f $ACTIVE_PROJECT/system/etc/.installed_su_daemon
+		rm -f "$ACTIVE_PROJECT/system/app/Superuser.apk" "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/xbin/daemonsu" "$ACTIVE_PROJECT/system/bin/.ext/.su" "$ACTIVE_PROJECT/system/etc/init.d/99SuperSUDaemon" "$ACTIVE_PROJECT/system/etc/.installed_su_daemon"
 		UPDATER_SCRIPT_DEL "files/root/updater-scripts"
 	fi
 	BUILD_UPDATER_SCRIPT
@@ -864,24 +859,23 @@ ROOT() {
 
 # Adds or removes custom bootanimation
 BOOTANIMATION() {
-	if [ ! -e $ACTIVE_PROJECT/system/media/bootanimation.zip ]; then
-		mv -f $ACTIVE_PROJECT/system/bin/bootanimation $ACTIVE_PROJECT/system/bin/bootanimation.orig
-		cp -R files/bootanimation/$ARCH/* $ACTIVE_PROJECT/
-		cp -R files/bootanimation/common/* $ACTIVE_PROJECT/
+	if [ ! -e "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]; then
+		mv -f "$ACTIVE_PROJECT/system/bin/bootanimation" "$ACTIVE_PROJECT/system/bin/bootanimation.orig"
+		cp -R "files/bootanimation/$ARCH/"* "$ACTIVE_PROJECT/"
+		cp -R files/bootanimation/common/* "$ACTIVE_PROJECT/"
 	else
-		mv -f $ACTIVE_PROJECT/system/bin/bootanimation.orig $ACTIVE_PROJECT/system/bin/bootanimation
-		rm -f $ACTIVE_PROJECT/system/media/bootanimation.zip
+		mv -f "$ACTIVE_PROJECT/system/bin/bootanimation.orig" "$ACTIVE_PROJECT/system/bin/bootanimation"
+		rm -f "$ACTIVE_PROJECT/system/media/bootanimation.zip"
 	fi
 }
 
 # Adds or removes busybox
 BUSYBOX() {
-	if [ ! -e $ACTIVE_PROJECT/system/xbin/busybox ]; then
-		mkdir -p $ACTIVE_PROJECT/system/xbin
-		cp -R files/busybox/$ARCH/* $ACTIVE_PROJECT/
+	if [ ! -e "$ACTIVE_PROJECT/system/xbin/busybox" ]; then
+		cp -R "files/busybox/$ARCH/"* "$ACTIVE_PROJECT/"
 		UPDATER_SCRIPT_ADD "files/busybox/updater-scripts"
 	else
-		rm -f $ACTIVE_PROJECT/system/xbin/busybox
+		rm -f "$ACTIVE_PROJECT/system/xbin/busybox"
 		UPDATER_SCRIPT_DEL "files/busybox/updater-scripts"
 	fi
 	BUILD_UPDATER_SCRIPT
@@ -889,8 +883,8 @@ BUSYBOX() {
 
 # Adds or removes insecure ADB
 ADB() {
-	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
-		if [ $(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?) -eq 0 ]; then
+	if [ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
+		if [ "$(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?)" -eq 0 ]; then
 			SED_CHANGE_WORD "ro.adb.secure=1" "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
 			SED_CHANGE_WORD "ro.secure=1" "ro.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
 		else
@@ -915,21 +909,21 @@ PRINT_BANNER() {
 
 # Prints status of the project
 PRINT_PROJECT_STATUS() {
-	ALLFINE=true
-	if [ -d $ACTIVE_PROJECT/kernel ]; then
-		ALLFINE=false
+	ALLFINE=1
+	if [ -d "$ACTIVE_PROJECT/kernel" ]; then
+		ALLFINE=0
 		echo "WARNING: Unpacked kernel found"
 	fi
-	if [ ! -f $ACTIVE_PROJECT/boot.img ]; then
-		ALLFINE=false
+	if [ ! -f "$ACTIVE_PROJECT/boot.img" ]; then
+		ALLFINE=0
 		echo "WARNING: No boot.img found, ROM will not boot properly"
 	fi
-	if [ ! -d $ACTIVE_PROJECT/META-INF ]; then
-		ALLFINE=false
+	if [ ! -d "$ACTIVE_PROJECT/META-INF" ]; then
+		ALLFINE=0
 		echo "WARNING: No META-INF folder found, this is not a ROM"
 	fi
 	echo -n "Project status: "
-	if ($ALLFINE); then
+	if [ "$ALLFINE" -eq 1 ]; then
 		echo "OK"
 	else
 		echo "WARNING"
@@ -942,9 +936,9 @@ PRINT_ROM_STATUS() {
 	echo -n "Architecture: ["
 	if [ "$ARCH" = "unknown" ] && [ -f "$ACTIVE_PROJECT/system/build.prop" ]; then
 		ARCH="$(grep -i "ro.product.cpu.abi" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
-		if [ $(echo "$ARCH" | grep -qi "arm"; echo $?) -eq 0 ]; then
+		if [ "$(echo "$ARCH" | grep -qi "arm"; echo $?)" -eq 0 ]; then
 			ARCH="arm"
-		elif [ $(echo "$ARCH" | grep -qi "x86"; echo $?) -eq 0 ]; then
+		elif [ "$(echo "$ARCH" | grep -qi "x86"; echo $?)" -eq 0 ]; then
 			ARCH="x86"
 		else
 			ARCH="unknown"
@@ -954,52 +948,51 @@ PRINT_ROM_STATUS() {
 	echo
 
 	echo -n "ArchiDroid Init.d? "
-	if [ ! -e $ACTIVE_PROJECT/system/bin/debuggerd.real ]; then
+	if [ ! -e "$ACTIVE_PROJECT/system/bin/debuggerd.real" ]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
 	fi
 	echo -n "Deodexed? "
-	if [ -e $ACTIVE_PROJECT/system/framework/framework.odex ]; then
+	if [ -e "$ACTIVE_PROJECT/system/framework/framework.odex" ]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
 	fi
 	echo -n "Zipaligned? "
-	"$ZIPALIGN" -c $ALIGN $ACTIVE_PROJECT/system/framework/framework-res.apk
-	if [ $? -ne 0 ]; then
-		echo "[NO]"
-	else
+	if [ -f "$ACTIVE_PROJECT/system/framework/framework-res.apk" ] && [ "$("$ZIPALIGN" -c "$ALIGN" "$ACTIVE_PROJECT/system/framework/framework-res.apk"; echo $?)" -eq 0 ]; then
 		echo "[YES]"
+	else
+		echo "[NO]"
 	fi
 	echo -n "Rooted? "
-	if [ ! -e $ACTIVE_PROJECT/system/xbin/su ]; then
+	if [ ! -e "$ACTIVE_PROJECT/system/xbin/su" ]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
 	fi
 	echo -n "Busybox? "
-	if [ ! -e $ACTIVE_PROJECT/system/xbin/busybox ]; then
+	if [ ! -e "$ACTIVE_PROJECT/system/xbin/busybox" ]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
 	fi
 	echo -n "Custom Bootanimation? "
-	if [ ! -e $ACTIVE_PROJECT/system/media/bootanimation.zip ]; then
+	if [ ! -e "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
 	fi
-	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
+	if [ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
 		echo "--------------------------------------------------------------------------------"
 		echo -n "ADB? "
-		if [ $(grep -qi "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?) -eq 0 ]; then
+		if [ "$(grep -qi "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?)" -eq 0 ]; then
 			echo "[INSECURE]"
 		else
 			echo "[SECURE]"
 		fi
 		echo -n "Kernel Init.d? "
-		if [ $(grep -qi "sysinit" "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"; echo $?) -eq 0 ]; then
+		if [ "$(grep -qi "sysinit" "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"; echo $?)" -eq 0 ]; then
 			echo "[YES]"
 		else
 			echo "[NO]"
@@ -1018,13 +1011,13 @@ PRINT_SWITCHES() {
 	echo "b   - Enable/Disable Busybox"
 	echo "ba  - Enable/Disable Custom Bootanimation"
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-	if [ -e $ACTIVE_PROJECT/kernel/ramdisk ]; then
+	if [ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
 		echo "kr	- Repack kernel (apply all ramdisk changes)"
 		echo "ka	- Abort repacking (abort all ramdisk changes)"
 		echo
 		echo "i	- Add Init.d Support (Bugged?) (hardware kernel hook)"
 		echo "adb	- Enable/Disable insecure ADB"
-	elif [ -e $ACTIVE_PROJECT/boot.img ]; then
+	elif [ -e "$ACTIVE_PROJECT/boot.img" ]; then
 		echo "ku	- Unpack kernel (this enables more options!)"
 	fi
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
@@ -1042,7 +1035,7 @@ PAGE_SETTINGS() {
 		clear
 		PRINT_BANNER
 		echo -n "Full performance: "
-		if ($FULLPERFORMANCE); then
+		if [ "$FULLPERFORMANCE" -eq 1 ]; then
 			echo "[YES]"
 		else
 			echo "[NO]"
@@ -1061,10 +1054,10 @@ PAGE_SETTINGS() {
 		read -p "CHOICE: " CHOICE
 		case "$CHOICE" in
 			p|P)
-				if ($FULLPERFORMANCE); then
-					FULLPERFORMANCE=false
+				if [ "$FULLPERFORMANCE" -eq 1 ]; then
+					FULLPERFORMANCE=0
 				else
-					FULLPERFORMANCE=true
+					FULLPERFORMANCE=1
 				fi
 				;;
 			x|X) return 0
@@ -1109,7 +1102,7 @@ while :; do
 		ka|KA) KERNEL_ABORT ;;
 		bbe|BBE) BUILD "EXPERT" ;;
 		bb|BB)
-			if ($ALLFINE); then
+			if [ "$ALLFINE" -eq 1 ]; then
 				BUILD
 			else
 				echo "ERROR: Can't build ROM in actual status, please check warings above and correct them!"
