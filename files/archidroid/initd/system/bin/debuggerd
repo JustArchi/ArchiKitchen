@@ -42,27 +42,41 @@ BACKGROUND=1
 
 # Don't change values below unless you know what you're doing
 INITDPART="/system/etc/init.d/00ARCHIDROID_INITD" # This is the init.d part of ArchiDroid's Init.d
-CHECKPART="/dev/HAS_INIT" # This is the check-file, must be the same here and in the init.d part specified above
+CHECKPART="/dev/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the init.d part specified above
 DEBUGGERD="debuggerd.real" # This is the *real* debuggerd binary which should be executed after we're done
 
 # Core
 if [ ! -x "$INITDPART" ]; then
-	exit 1
-fi
+	echo "ERROR: INITDPART $INITDPART was not found, make sure that it exists and is executable, halt" > "$CHECKPART"
+else
+	# ArchiDroid Backend call, used only on ArchiDroid ROM
+	if [ ! -z "$(which ARCHIDROID_RUNONCE)" ]; then
+		ARCHIDROID_RUNONCE "background" &
+	elif [ ! -z "$(which ARCHIDROID_INIT)" ]; then
+		ARCHIDROID_INIT "background" &
+	fi
 
-if [ ! -f "$CHECKPART" ]; then
-	sleep "$DELAY"
-fi
+	if [ ! -f "$CHECKPART" ]; then
+		sleep "$DELAY"
+	fi
 
-if [ ! -f "$CHECKPART" ]; then
-	if [ "$BACKGROUND" -eq 1 ]; then
+	if [ ! -f "$CHECKPART" ]; then
 		find /system/etc/init.d -mindepth 1 -maxdepth 1 -type f | sort | while read line; do
-			"$line" &
+			if [ -x "$line" ]; then
+				if [ "$BACKGROUND" -eq 1 ]; then
+					"$line" &
+				else
+					"$line"
+				fi
+			fi
 		done
+		if [ ! -f "$CHECKPART" ]; then
+			echo "ERROR: CHECKPART doesn't exist even after our init.d execution. This shouldn't happen, something is seriously broken here, please investigate" > "$CHECKPART"
+		else
+			echo "Init.d has been properly executed by ArchiDroid Init.d" > "$CHECKPART"
+		fi
 	else
-		find /system/etc/init.d -mindepth 1 -maxdepth 1 -type f | sort | while read line; do
-			"$line"
-		done
+		echo "Init.d has been properly executed by the kernel" > "$CHECKPART"
 	fi
 fi
 

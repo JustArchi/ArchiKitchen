@@ -29,7 +29,7 @@
 # Therefore, it's a very safe method for having reliable init.d call, without modyfing the kernel's ramdisk
 
 # Don't change values below unless you know what you're doing
-CHECKPART="/dev/HAS_INIT" # This is the check-file, must be the same here and in the hook part described above
+CHECKPART="/dev/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the hook part described above
 
 # Core
 touch "$CHECKPART"
