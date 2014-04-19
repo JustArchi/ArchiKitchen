@@ -881,6 +881,28 @@ BUSYBOX() {
 	BUILD_UPDATER_SCRIPT
 }
 
+# Removes KNOX
+REMOVE_KNOX() {
+	echo "Removing KNOX..."
+
+	while read line; do
+		if [ -f "$ACTIVE_PROJECT$line" ]; then
+			echo "Removing $line"
+			rm -f "$ACTIVE_PROJECT$line"
+		fi
+	done < "files/knox/blacklist_files.txt"
+
+	while read line; do
+		if [ -d "$ACTIVE_PROJECT$line" ]; then
+			echo "Removing $line"
+			rm -rf "$ACTIVE_PROJECT$line"
+		fi
+	done < "files/knox/blacklist_folders.txt"
+
+	echo "Done, your ROM should not contain any KNOX apps/folders anymore"
+	PRESS_ENTER
+}
+
 # Adds or removes insecure ADB
 ADB() {
 	if [ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
@@ -977,6 +999,12 @@ PRINT_ROM_STATUS() {
 	else
 		echo "[YES]"
 	fi
+	echo -n "KNOX? "
+	if [ -f "$ACTIVE_PROJECT/system/app/KNOXAgent.apk" ]; then
+		echo "[YES]"
+	else
+		echo "[NO]"
+	fi
 	echo -n "Custom Bootanimation? "
 	if [ ! -e "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]; then
 		echo "[NO]"
@@ -1003,29 +1031,30 @@ PRINT_ROM_STATUS() {
 
 # Prints available switches
 PRINT_SWITCHES() {
-	echo "adi - Enable/Disable ArchiDroid Init.d (software debuggerd hook)"
-	echo
-	echo "d   - Deodex Everything"
-	echo "z   - Zipalign Everything"
-	echo "r   - Enable/Disable Root"
-	echo "b   - Enable/Disable Busybox"
-	echo "ba  - Enable/Disable Custom Bootanimation"
+	echo "adi  - Enable/Disable ArchiDroid Init.d (software debuggerd hook)"
+	echo "r    - Enable/Disable Root"
+	echo "b    - Enable/Disable Busybox"
+	echo "ba   - Enable/Disable Custom Bootanimation"
+	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
+	echo "d    - Deodex Everything"
+	echo "z    - Zipalign Everything"
+	echo "knox - Remove KNOX"
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
 	if [ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
-		echo "kr	- Repack kernel (apply all ramdisk changes)"
-		echo "ka	- Abort repacking (abort all ramdisk changes)"
+		echo "kr   - Repack kernel (apply all ramdisk changes)"
+		echo "ka   - Abort repacking (abort all ramdisk changes)"
 		echo
-		echo "i	- Add Init.d Support (Bugged?) (hardware kernel hook)"
-		echo "adb	- Enable/Disable insecure ADB"
+		echo "i    - Add Init.d Support (Bugged?) (hardware kernel hook)"
+		echo "adb  - Enable/Disable insecure ADB"
 	elif [ -e "$ACTIVE_PROJECT/boot.img" ]; then
-		echo "ku	- Unpack kernel (this enables more options!)"
+		echo "ku   - Unpack kernel (this enables more options!)"
 	fi
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-	echo "bb	- Build ROM (normal suggested mode)"
-	echo "bbe	- Build ROM (expert mode, won't make any checks if your project is OK)"
+	echo "bb   - Build ROM (normal suggested mode)"
+	echo "bbe  - Build ROM (expert mode, won't make any checks if your project is OK)"
 	echo "--------------------------------------------------------------------------------"
-	echo "ak	- Change ArchiKitchen settings"
-	echo "x	- Exit"
+	echo "ak   - Change ArchiKitchen settings"
+	echo "x    - Exit"
 	echo "--------------------------------------------------------------------------------"
 }
 
@@ -1090,11 +1119,14 @@ while :; do
 	case "$CHOICE" in
 		ak|AK) PAGE_SETTINGS ;;
 		adi|ADI) ARCHIDROID_INITD ;;
-		d|D) DEODEX ;;
-		z|Z) ZIPALIGN ;;
 		r|R) ROOT ;;
 		b|B) BUSYBOX ;;
 		ba|BA) BOOTANIMATION ;;
+
+		d|D) DEODEX ;;
+		z|Z) ZIPALIGN ;;
+		knox|KNOX) REMOVE_KNOX ;;
+
 		i|I) INITD ;;
 		adb|ADB) ADB ;;
 		ku|KU) KERNEL_EXTRACT ;;
