@@ -1,8 +1,15 @@
 /system/app/ContainerAgent.apk
+/system/app/ContainerAgent.odex
 /system/app/KNOXAgent.apk
+/system/app/KNOXAgent.odex
 /system/app/KnoxAttestationAgent.apk
+/system/app/KnoxAttestationAgent.odex
 /system/app/KNOXStore.apk
+/system/app/KNOXStore.odex
 /system/app/KNOXStub.apk
+/system/app/KNOXStub.odex
 /system/lib/libknoxdrawglfunction.so
 /system/priv-app/KLMSAgent.apk
+/system/priv-app/KLMSAgent.odex
 /system/priv-app/SPDClient.apk
+/system/priv-app/SPDClient.odex
