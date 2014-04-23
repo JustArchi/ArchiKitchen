@@ -647,21 +647,30 @@ KERNEL_EXTRACT() {
 
 # Repacks the kernel from previously extracted one
 KERNEL_REPACK() {
-	if [ -e "$ACTIVE_PROJECT/kernel" ]; then
-		if [ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
+	if [ -d "$ACTIVE_PROJECT/kernel" ]; then
+		if [ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]; then
 			cd "$ACTIVE_PROJECT/kernel/ramdisk"
 			find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
 			cd ../../..
-			temp/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" --ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW."* -o "$ACTIVE_PROJECT/temp.img"
+			temp/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
+			--ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.gz" \
+			--base "$(cat "$ACTIVE_PROJECT/kernel/boot.img-base")" \
+			--cmdline "$(cat "$ACTIVE_PROJECT/kernel/boot.img-cmdline")" \
+			--kernel_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-kerneloff")" \
+			--pagesize "$(cat "$ACTIVE_PROJECT/kernel/boot.img-pagesize")" \
+			--ramdisk_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-ramdiskoff")" \
+			--tags_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-tagsoff")" \
+			-o "$ACTIVE_PROJECT/temp.img"
+			mv -f "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
 		else
-			temp/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" --ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk."* -o "$ACTIVE_PROJECT/temp.img"
+			echo "Error, no ramdisk found?!"
+			PRESS_ENTER
 		fi
-		mv -f "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
-		rm -rf "$ACTIVE_PROJECT/kernel"
+		KERNEL_ABORT
 	fi
 }
 
-# Aborts kernel repacking
+# Aborts kernel repacking - performs cleaning
 KERNEL_ABORT() {
 	rm -rf "$ACTIVE_PROJECT/kernel"
 	rm -f "$ACTIVE_PROJECT/temp.img"
