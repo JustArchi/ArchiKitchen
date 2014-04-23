@@ -215,12 +215,21 @@ SET_PROJECT() {
 # Sets old project as active one
 SET_OLDPROJECT() {
 	clear
-	echo "Here is the list of projects you've created in the past:"
+	local COUNT=0
+	local LASTFOUND=""
+	echo "Searching for projects you've created in the past..."
 	echo "=-=-=-=-=-=-=-=-="
-	find . -type d -iname "PROJECT_*" | while read line; do
-		basename "$line"
-	done
+	while read line; do
+		((COUNT++))
+		LASTFOUND="$line"
+		basename "$LASTFOUND"
+	done < <(find . -type d -iname "PROJECT_*") # Avoid a subshell, because we must remember variables
 	echo "=-=-=-=-=-=-=-=-="
+	echo "Found total of $COUNT projects"
+	if [ "$COUNT" -eq 1 ]; then
+		ACTIVE_PROJECT="$LASTFOUND" # If we have only one project, there's nothing to choose from, so we can save some precious seconds
+		return 0
+	fi
 	echo "Write a name of any from the projects detected above or 'x' to go back"
 	read -p "Your selected project: " CHOICE
 	case "$CHOICE" in
