@@ -1,4 +1,3 @@
 /system/etc/secure_storage/com.sec.knox.store
 /system/containers
 /system/preloadedsso
-/system/preloadedkiosk

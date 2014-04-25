@@ -1,7 +1,7 @@
 /system/app/ContainerAgent.apk
 /system/app/ContainerAgent.odex
-system/app/ContainerEventsRelayManager.apk
-system/app/ContainerEventsRelayManager.odex
+/system/app/ContainerEventsRelayManager.apk
+/system/app/ContainerEventsRelayManager.odex
 /system/app/KLMSAgent.apk
 /system/app/KLMSAgent.odex
 /system/app/KNOXAgent.apk
