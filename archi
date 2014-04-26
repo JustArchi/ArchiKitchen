@@ -94,7 +94,7 @@ PRESS_ENTER() {
 
 # Executes commands given in arguments as root
 ROOT_EXECUTE() {
-	if [ "$CUSER" == "root" ]; then
+	if [ "$CUSER" = "root" ]; then
 		$@ # Yes, we must break on spaces in this case
 	else
 		echo "Root access is required! $@"
@@ -462,9 +462,11 @@ UPDATER_SCRIPT_ADD() {
 	local FILE=""
 	for UPDATER_SCRIPT in "$FOLDER/updater-script-"*; do
 		FILE="$(basename "$UPDATER_SCRIPT")"
-		echo "" >> "$ACTIVE_PROJECT/$META_INF/$FILE" # This is to ensure that we have a new line BEFORE appending"
-		cat "$UPDATER_SCRIPT" >> "$ACTIVE_PROJECT/$META_INF/$FILE"
-		echo "" >> "$ACTIVE_PROJECT/$META_INF/$FILE" # This is to ensure that we have a new line AFTER appending"
+		{
+			echo "" # This is to ensure that we have a new line BEFORE appending"
+			cat "$UPDATER_SCRIPT"
+			echo "" # This is to ensure that we have a new line AFTER appending"
+		} >> "$ACTIVE_PROJECT/$META_INF/$FILE"
 		sed -i '/^$/d' "$ACTIVE_PROJECT/$META_INF/$FILE" # This removes safety lines added above
 	done
 }
@@ -494,12 +496,13 @@ BUILD_UPDATER_SCRIPT() {
 	echo -n "" > "$ACTIVE_PROJECT/$META_INF/updater-script"
 	for UPDATER_SCRIPT in "$ACTIVE_PROJECT/$META_INF/updater-script-"*; do
 		HEADER="# $(basename "$UPDATER_SCRIPT")"
-		echo "" >> "$ACTIVE_PROJECT/$META_INF/updater-script" # This is to ensure that we have a new line BEFORE appending"
-		echo "$HEADER" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
-		cat "$UPDATER_SCRIPT" >> "$ACTIVE_PROJECT/$META_INF/updater-script"
-		echo "" >> "$ACTIVE_PROJECT/$META_INF/updater-script" # This is to ensure that we have a new line AFTER appending"
+		{
+			echo "" # This is to ensure that we have a new line BEFORE appending"
+			echo "$HEADER"
+			cat "$UPDATER_SCRIPT"
+			echo "" # This is to ensure that we have a new line AFTER appending"
+		} >> "$ACTIVE_PROJECT/$META_INF/updater-script"
 	done
-
 	sed -i '/^$/d' "$ACTIVE_PROJECT/$META_INF/updater-script" # This removes safety lines added above
 	GREP_DELETE_WORD "/tmp/invalid" "$ACTIVE_PROJECT/$META_INF/updater-script" "^" # This is to ensure that we won't pollute our updater-script with invalid paths for kernel or modem
 }
@@ -587,9 +590,9 @@ FIX_SYMLINKS() {
 			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			echo "" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
 			find "$ACTIVE_PROJECT/" -type l | sort | while read SYMLINK; do
-				TARGET="$(readlink $SYMLINK)"
+				TARGET="$(readlink "$SYMLINK")"
 				REALPATH="/" # TODO: We can assume that we have only one slash (/) before the right pattern ($ACTIVE_PROJECT)
-				REALPATH+="$(echo $SYMLINK | cut -d'/' -f2-)" # If there's a way to determine that without making such assumption, it would be great
+				REALPATH+="$(echo "$SYMLINK" | cut -d'/' -f2-)" # If there's a way to determine that without making such assumption, it would be great
 				echo "symlink(\"$TARGET\", \"$REALPATH\");" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
 				echo "$REALPATH -> $TARGET" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			done
