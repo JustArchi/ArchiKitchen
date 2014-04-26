@@ -27,6 +27,8 @@ set +e
 VERSION="1.0" # Unused
 TOOLS=(which whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
 XDALINK="http://forum.xda-developers.com/showthread.php?t=2597220"
+GITHUBLINK="https://github.com/JustArchi/ArchiKitchen.git"
+GITHUBBRANCH="master"
 
 ACTIVE_PROJECT=""
 ARCH="unknown"
@@ -44,39 +46,6 @@ UPDATER_SCRIPT_USER="updater-script-85_USER" # Unused
 UPDATER_SCRIPT_KERNEL="updater-script-90_KERNEL"
 UPDATER_SCRIPT_MODEM="updater-script-91_MODEM"
 UPDATER_SCRIPT_TAIL="updater-script-99_TAIL" # Unused
-
-clear
-echo -n "Please wait"
-
-# Before we begin, make sure that all our tools are available
-MISSINGTOOLS=""
-for TOOL in "${TOOLS[@]}"; do
-	echo -n "."
-	if [ -z "$(which $TOOL)" ]; then
-		MISSINGTOOLS+=" $TOOL"
-	fi
-done
-echo ""
-
-if [ ! -z "$MISSINGTOOLS" ]; then
-	echo "It looks like you don't have required tool(s): $MISSINGTOOLS"
-	echo "This check was made through 'which' command"
-	echo "Please install missing tool(s) and launch kitchen again"
-	exit 1
-fi
-
-# Check LONG_BIT for determining host architecture
-HOSTARCH="$(getconf LONG_BIT)" # Unused
-
-# Set common tools
-ZIPALIGN="./tools/zipalign/zipalign"
-
-# Navigate to our folder, even if user didn't execute it from the root dir
-cd "$(dirname "$0")"
-
-# Make sure our tools are executable
-# This is only required if user downloaded zip and permissions are broken (f.e. due to moving files from windows => linux)
-chmod -R 755 tools
 
 #  _____                 _   _
 # |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
@@ -1115,6 +1084,37 @@ PAGE_SETTINGS() {
 	done
 }
 
+# Auto-update feature of ArchiKitchen
+CHECK_UPDATE() {
+	if [ -d ".git" ] && [ ! -z "$(which git)" ]; then
+		echo "Auto-update in progress..."
+		local REPO="archikitchen"
+		local OLDHEAD="$(git rev-parse HEAD)"
+		local CURBRANCH="$(git rev-parse --abbrev-ref HEAD)"
+		if [ "$CURBRANCH" != "$GITHUBBRANCH" ]; then
+			echo "You're currently using $CURBRANCH branch, and this is not the default $GITHUBBRANCH branch. Auto-update feature has been disabled"
+			PRESS_ENTER
+			return 0
+		fi
+		if [ "$(git remote | grep -qi "$REPO"; echo $?)" -ne 0 ]; then
+			git remote add "$REPO" "$GITHUBLINK"
+		fi
+		echo "Fetching current version..."
+		git fetch "$REPO" "$GITHUBBRANCH" >/dev/null 2>&1
+		local HEAD="$(git rev-parse "$REPO/$GITHUBBRANCH")"
+		if [ ! -z "$HEAD" ] && [ "$OLDHEAD" != "$HEAD" ]; then
+			echo "Found new version!"
+			git pull "$REPO" "$GITHUBBRANCH"
+			echo "ArchiKitchen has been updated, it will now restart itself"
+			PRESS_ENTER
+			exec "$0"
+		else
+			echo "No new updates found"
+			PRESS_ENTER
+		fi
+	fi
+}
+
 ############################
 #   ____ ___  ____  _____  #
 #  / ___/ _ \|  _ \| ____| #
@@ -1123,6 +1123,44 @@ PAGE_SETTINGS() {
 #  \____\___/|_| \_\_____| #
 #                          #
 ############################
+
+clear
+PRINT_BANNER
+echo -n "Please wait"
+
+# Before we begin, make sure that all our tools are available
+MISSINGTOOLS=""
+for TOOL in "${TOOLS[@]}"; do
+	echo -n "."
+	if [ -z "$(which $TOOL)" ]; then
+		MISSINGTOOLS+=" $TOOL"
+	fi
+done
+echo ""
+
+if [ ! -z "$MISSINGTOOLS" ]; then
+	echo "It looks like you don't have required tool(s): $MISSINGTOOLS"
+	echo "This check was made through 'which' command"
+	echo "Please install missing tool(s) and launch kitchen again"
+	exit 1
+fi
+
+# Check LONG_BIT for determining host architecture
+HOSTARCH="$(getconf LONG_BIT)" # Unused
+
+# Set common tools
+ZIPALIGN="./tools/zipalign/zipalign"
+
+# Navigate to our folder, even if user didn't execute it from the root dir
+cd "$(dirname "$0")"
+
+# Make sure our tools are executable
+# This is only required if user downloaded zip and permissions are broken (f.e. due to moving files from windows => linux)
+chmod -R 755 tools
+
+# Check for updates
+CHECK_UPDATE
+
 while :; do
 	clear
 
