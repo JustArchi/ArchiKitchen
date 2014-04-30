@@ -1,15 +1,2 @@
-original_update/*
-*.log
-.gitignore
-old_app*
-old_framework*
-.DS_Store
-OUTPUT_ZIP
-BOOT-EXTRACTED
-PROJECT*
-temp
-bootimg_*
-csc_*
-todo.txt
-*.swp
-/archi~
+PROJECT_*
+OUTPUT

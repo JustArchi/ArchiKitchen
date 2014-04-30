@@ -716,14 +716,14 @@ BUILD() {
 	cd "$ACTIVE_PROJECT"
 	zip -ry -"$COMPLEVEL" "$ACTIVE_PROJECT.zip" . -x "$META_INF/updater-script-"*
 	cd ..
-	mkdir -p OUTPUT_ZIP
-	mv -f "$ACTIVE_PROJECT/$ACTIVE_PROJECT.zip" "OUTPUT_ZIP/$ACTIVE_PROJECT.zip"
-	echo "Done, your ROM is available in OUTPUT_ZIP/$ACTIVE_PROJECT.zip"
+	mkdir -p OUTPUT
+	mv -f "$ACTIVE_PROJECT/$ACTIVE_PROJECT.zip" "OUTPUT/$ACTIVE_PROJECT.zip"
+	echo "Done, your ROM is available in OUTPUT/$ACTIVE_PROJECT.zip"
 	read -p "Rename it? [N/y]: " CHOICE
 	case "$CHOICE" in
 		y|Y)
 			read -p "New name: " NAME
-			mv -f "OUTPUT_ZIP/$ACTIVE_PROJECT.zip" "OUTPUT_ZIP/$NAME"
+			mv -f "OUTPUT/$ACTIVE_PROJECT.zip" "OUTPUT/$NAME"
 	esac
 	echo "All done, your ROM should be ready!"
 	echo "Thank you for using ArchiKitchen!"
@@ -1100,7 +1100,7 @@ CHECK_UPDATE() {
 			git remote add "$REPO" "$GITHUBLINK"
 		fi
 		echo "Fetching current version..."
-		git fetch "$REPO" "$GITHUBBRANCH" >/dev/null 2>&1
+		git fetch -q "$REPO" "$GITHUBBRANCH"
 		local HEAD="$(git rev-parse "$REPO/$GITHUBBRANCH")"
 		if [ $? -ne 0 ]; then
 			echo "WARNING, It seems like your git is outdated or not compatible with ArchiKitchen"
@@ -1113,7 +1113,14 @@ CHECK_UPDATE() {
 		fi
 		if [ ! -z "$HEAD" ] && [ "$OLDHEAD" != "$HEAD" ]; then
 			echo "Found new version!"
-			git pull "$REPO" "$GITHUBBRANCH"
+			echo "Changelog:"
+			echo "=========="
+			git --no-pager log --abbrev-commit --decorate --date=relative --pretty=format:'%C(bold red)%h%Creset %C(bold green)(%cr)%Creset - %C(bold yellow)%s%Creset %C(bold blue)commited by%Creset %C(bold cyan)%an%Creset' "$OLDHEAD..$HEAD"
+			echo # Beacause git log doesn't finish with newline
+			echo "=========="
+			git reset -q --hard # Clean all changes in tracked files to ensure no conflicts are present, we don't want to merge any conflicts
+			#git clean -fd # This would be cool with 
+			git pull -q "$REPO" "$GITHUBBRANCH"
 			echo "ArchiKitchen has been updated, it will now restart itself"
 			PRESS_ENTER
 			exec "$0"
