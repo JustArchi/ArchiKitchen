@@ -1102,6 +1102,15 @@ CHECK_UPDATE() {
 		echo "Fetching current version..."
 		git fetch "$REPO" "$GITHUBBRANCH" >/dev/null 2>&1
 		local HEAD="$(git rev-parse "$REPO/$GITHUBBRANCH")"
+		if [ $? -ne 0 ]; then
+			echo "WARNING, It seems like your git is outdated or not compatible with ArchiKitchen"
+			echo "You're using $(git --version), ArchiKitchen was tested on versions 1.9+"
+			echo "Please make sure that you're using latest git if you want to use auto-update feature"
+			echo "As for now, automatic updates are DISABLED due to incompatible git"
+			echo "You can still update manually through git pull command"
+			PRESS_ENTER
+			return 1
+		fi
 		if [ ! -z "$HEAD" ] && [ "$OLDHEAD" != "$HEAD" ]; then
 			echo "Found new version!"
 			git pull "$REPO" "$GITHUBBRANCH"
