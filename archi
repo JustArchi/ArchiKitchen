@@ -111,13 +111,13 @@ TRY_MOUNT() {
 	echo "Stage 2: Checking if image is in special sparse ext4 format available for conversion..."
 	if [ "$(od -A n -h -N 5 "$1" | sed 's/ //g')" = "ff3aed260001" ]; then
 		echo "Yes it is!"
-		if [ ! -x "temp/simg2img" ]; then
+		if [ ! -x "TEMP/simg2img" ]; then
 			echo "Compiling simg2img..."
-			mkdir -p "temp"
-			gcc -O2 "tools/simg2img/sparse_crc32.c" "tools/simg2img/simg2img.c" -o "temp/simg2img"
+			mkdir -p "TEMP"
+			gcc -O2 "tools/simg2img/sparse_crc32.c" "tools/simg2img/simg2img.c" -o "TEMP/simg2img"
 		fi
 		echo "Converting sparse image to image..."
-		./temp/simg2img "$1" "$1".simg2img
+		./TEMP/simg2img "$1" "$1".simg2img
 		if [ $? -ne 0 ]; then
 			echo "Conversion failed"
 			PRESS_ENTER
@@ -593,8 +593,8 @@ FIX_SYMLINKS() {
 # Extracts the kernel
 KERNEL_EXTRACT() {
 	if [ ! -e "$ACTIVE_PROJECT/kernel" ]; then
-		mkdir -p temp
-		if [ ! -e temp/mkbootimg ]; then
+		mkdir -p TEMP
+		if [ ! -e TEMP/mkbootimg ]; then
 			cd tools/kernel/mkbootimg
 			make
 			if [ ! -e mkbootimg ] || [ ! -e unpackbootimg ]; then
@@ -602,15 +602,15 @@ KERNEL_EXTRACT() {
 				PRESS_ENTER
 				return 1
 			fi
-			cp mkbootimg ../../../temp/mkbootimg
-			cp unpackbootimg ../../../temp/unpackbootimg
+			cp mkbootimg ../../../TEMP/mkbootimg
+			cp unpackbootimg ../../../TEMP/unpackbootimg
 			make clean
 			cd ../../..
 		fi
 		if [ -e "$ACTIVE_PROJECT/boot.img" ]; then
 			rm -rf "$ACTIVE_PROJECT/kernel"
 			mkdir -p "$ACTIVE_PROJECT/kernel"
-			temp/unpackbootimg -i "$ACTIVE_PROJECT/boot.img" -o "$ACTIVE_PROJECT/kernel"
+			TEMP/unpackbootimg -i "$ACTIVE_PROJECT/boot.img" -o "$ACTIVE_PROJECT/kernel"
 			mkdir -p "$ACTIVE_PROJECT/kernel/ramdisk"
 			if [ -e "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" ]; then
 				cd "$ACTIVE_PROJECT/kernel/ramdisk"
@@ -633,7 +633,7 @@ KERNEL_REPACK() {
 			cd "$ACTIVE_PROJECT/kernel/ramdisk"
 			find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
 			cd ../../..
-			temp/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
+			TEMP/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
 			--ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.gz" \
 			--base "$(cat "$ACTIVE_PROJECT/kernel/boot.img-base")" \
 			--cmdline "$(cat "$ACTIVE_PROJECT/kernel/boot.img-cmdline")" \
