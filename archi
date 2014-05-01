@@ -150,6 +150,7 @@ DEL_PROJECT() {
 # Creates new project
 SET_NEWPROJECT() {
 	clear
+	PRINT_BANNER
 	echo "Before you begin, you must specify what kind of the project you want to create"
 	echo
 	echo "b - Create a Bare Bones project"
@@ -184,6 +185,7 @@ SET_PROJECT() {
 # Sets old project as active one
 SET_OLDPROJECT() {
 	clear
+	PRINT_BANNER
 	local COUNT=0
 	local LASTFOUND=""
 	echo "Searching for projects you've created in the past..."
@@ -335,6 +337,7 @@ NEWPROJECT_ZIP() {
 SET_KERNEL() {
 	if [ -f "$ACTIVE_PROJECT/boot.img" ] && ([ "$(grep -qi "boot.img" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -ne 0 ] || [ "$(grep -qi "/tmp/invalid_kernel_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -eq 0 ]); then
 		clear
+		PRINT_BANNER
 		echo "WARNING! Kernel has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
 		local MODEL="$(grep -i "ro.product.device" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
@@ -375,6 +378,7 @@ SET_KERNEL() {
 SET_MODEM() {
 	if [ -f "$ACTIVE_PROJECT/modem.bin" ] && ([ "$(grep -qi "modem.bin" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -ne 0 ] || [ "$(grep -qi "/tmp/invalid_modem_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -eq 0 ]); then
 		clear
+		PRINT_BANNER
 		echo "WARNING! Modem has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
 		local MODEL="$(grep -i "ro.product.device" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
@@ -1179,7 +1183,6 @@ CHECK_UPDATE
 
 while :; do
 	clear
-
 	PRINT_BANNER
 
 	if [ -z "$ACTIVE_PROJECT" ]; then
