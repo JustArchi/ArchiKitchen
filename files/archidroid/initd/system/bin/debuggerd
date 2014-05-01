@@ -42,7 +42,7 @@ BACKGROUND=1
 
 # Don't change values below unless you know what you're doing
 INITDPART="/system/etc/init.d/00ARCHIDROID_INITD" # This is the init.d part of ArchiDroid's Init.d
-CHECKPART="/dev/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the init.d part specified above
+CHECKPART="/data/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the init.d part specified above
 DEBUGGERD="debuggerd.real" # This is the *real* debuggerd binary which should be executed after we're done
 
 # Core
@@ -56,11 +56,11 @@ else
 		ARCHIDROID_INIT "background" &
 	fi
 
-	if [ ! -f "$CHECKPART" ]; then
+	if [ ! -f "$CHECKPART" ] || [ "$(cat "$CHECKPART")" != "OK" ]; then
 		sleep "$DELAY"
 	fi
 
-	if [ ! -f "$CHECKPART" ]; then
+	if [ ! -f "$CHECKPART" ] || [ "$(cat "$CHECKPART")" != "OK" ]; then
 		find /system/etc/init.d -mindepth 1 -maxdepth 1 -type f | sort | while read line; do
 			if [ -x "$line" ]; then
 				if [ "$BACKGROUND" -eq 1 ]; then
@@ -70,7 +70,7 @@ else
 				fi
 			fi
 		done
-		if [ ! -f "$CHECKPART" ]; then
+		if [ ! -f "$CHECKPART" ] || [ "$(cat "$CHECKPART")" != "OK" ]; then
 			echo "ERROR: CHECKPART doesn't exist even after our init.d execution. This shouldn't happen, something is seriously broken here, please investigate" > "$CHECKPART"
 		else
 			echo "Init.d has been properly executed by ArchiDroid Init.d" > "$CHECKPART"
@@ -81,4 +81,3 @@ else
 fi
 
 exec "$DEBUGGERD" $@ # Yes, we must break on spaces in this case
-exit 0
