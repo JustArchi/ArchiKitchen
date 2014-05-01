@@ -1126,7 +1126,7 @@ CHECK_UPDATE() {
 			exec "$0"
 		else
 			echo "No new updates found"
-			PRESS_ENTER
+			sleep 1
 		fi
 	fi
 }
