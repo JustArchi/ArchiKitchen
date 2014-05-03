@@ -1,3 +1,4 @@
+/system/etc/secure_storage/com.sec.knox.seandroid
 /system/etc/secure_storage/com.sec.knox.store
 /system/containers
 /system/preloadedsso

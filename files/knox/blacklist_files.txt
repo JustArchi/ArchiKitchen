@@ -12,7 +12,10 @@
 /system/app/KNOXStore.odex
 /system/app/KNOXStub.apk
 /system/app/KNOXStub.odex
+/system/app/KnoxVpnServices.apk
+/system/app/KnoxVpnServices.odex
 /system/lib/libknoxdrawglfunction.so
+/system/lib/libknox_encryption.so
 /system/priv-app/KLMSAgent.apk
 /system/priv-app/KLMSAgent.odex
 /system/priv-app/SPDClient.apk
