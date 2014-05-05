@@ -29,6 +29,7 @@ TOOLS=(which whoami basename dirname gcc java perl sed cut wget od wc cpio zip u
 XDALINK="http://forum.xda-developers.com/showthread.php?t=2597220"
 GITHUBLINK="https://github.com/JustArchi/ArchiKitchen.git"
 GITHUBBRANCH="master"
+NEEDEDGIT="1.8"
 
 ACTIVE_PROJECT=""
 ARCH="unknown"
@@ -72,6 +73,18 @@ ROOT_EXECUTE() {
 		else
 			su -c $@ # Yes, we must break on spaces in this case
 		fi
+	fi
+}
+
+# Compares two versions
+VERSION_LESS_THAN() {
+	# $1 - Input version
+	# $2 - Compared version
+	# Returns true if $1 < $2, false otherwise
+	if [ "$(echo -e "$1\n$2" | sort -V | head -n 1)" = "$1" ]; then
+		return 0
+	else
+		return 1
 	fi
 }
 
@@ -1092,6 +1105,16 @@ PAGE_SETTINGS() {
 CHECK_UPDATE() {
 	if [ -d ".git" ] && [ ! -z "$(which git)" ]; then
 		echo "Auto-update in progress..."
+		local GITVERSION="$(git --version | cut -d' ' -f3)"
+		if VERSION_LESS_THAN "$GITVERSION" "$NEEDEDGIT"; then
+			echo
+			echo "WARNING: Your git version is lower than the required!"
+			echo "Your git version: $GITVERSION"
+			echo "Required git version: $NEEDEDGIT"
+			echo "Auto-update feature has been disabled, please update your git to latest version"
+			PRESS_ENTER
+			return 0
+		fi
 		local REPO="archikitchen"
 		local OLDHEAD="$(git rev-parse HEAD)"
 		local CURBRANCH="$(git rev-parse --abbrev-ref HEAD)"
@@ -1106,15 +1129,6 @@ CHECK_UPDATE() {
 		echo "Fetching current version..."
 		git fetch -q "$REPO" "$GITHUBBRANCH"
 		local HEAD="$(git rev-parse "$REPO/$GITHUBBRANCH")"
-		if [ $? -ne 0 ]; then
-			echo "WARNING, It seems like your git is outdated or not compatible with ArchiKitchen"
-			echo "You're using $(git --version), ArchiKitchen was tested on versions 1.9+"
-			echo "Please make sure that you're using latest git if you want to use auto-update feature"
-			echo "As for now, automatic updates are DISABLED due to incompatible git"
-			echo "You can still update manually through git pull command"
-			PRESS_ENTER
-			return 1
-		fi
 		if [ ! -z "$HEAD" ] && [ "$OLDHEAD" != "$HEAD" ]; then
 			echo "Found new version!"
 			echo "Changelog:"
