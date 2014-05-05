@@ -81,7 +81,7 @@ VERSION_LESS_THAN() {
 	# $1 - Input version
 	# $2 - Compared version
 	# Returns true if $1 < $2, false otherwise
-	if [ "$(echo -e "$1\n$2" | sort -V | head -n 1)" = "$1" ]; then
+	if [ "$1" != "$2" ] && [ "$(echo -e "$1\n$2" | sort -V | head -n 1)" = "$1" ]; then
 		return 0
 	else
 		return 1
