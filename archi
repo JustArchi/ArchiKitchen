@@ -1115,6 +1115,14 @@ CHECK_UPDATE() {
 			PRESS_ENTER
 			return 0
 		fi
+		echo "Checking network connection..."
+		if [ "$(wget --spider github.com >/dev/null 2>&1; echo $?)" -ne 0 ]; then
+			echo
+			echo "WARNING: Could not connect to github.com, probably your network is down"
+			echo "Auto-update feature has been disabled"
+			PRESS_ENTER
+			return 0
+		fi
 		local REPO="archikitchen"
 		local OLDHEAD="$(git rev-parse HEAD)"
 		local CURBRANCH="$(git rev-parse --abbrev-ref HEAD)"
@@ -1136,9 +1144,7 @@ CHECK_UPDATE() {
 			git --no-pager log --abbrev-commit --decorate --date=relative --pretty=format:'%C(bold red)%h%Creset %C(bold green)(%cr)%Creset - %C(bold yellow)%s%Creset %C(bold blue)commited by%Creset %C(bold cyan)%an%Creset' "$OLDHEAD..$HEAD"
 			echo # Beacause git log doesn't finish with newline
 			echo "=========="
-			git reset -q --hard # Clean all changes in tracked files to ensure no conflicts are present, we don't want to merge any conflicts
-			#git clean -fd # This would be cool with 
-			git pull -q "$REPO" "$GITHUBBRANCH"
+			git pull -q "$REPO" "$GITHUBBRANCH" >/dev/null 2>&1 || (echo; echo "WARNING: ArchiDroid could not apply update due to conflicts, forced update mode will be used now. Please make proper backups if you need any of your past projects before going to the next step"; PRESS_ENTER; git reset -q --hard; git clean -qfd; git pull -q "$REPO" "$GITHUBBRANCH")
 			echo "ArchiKitchen has been updated, it will now restart itself"
 			PRESS_ENTER
 			exec "$0"
