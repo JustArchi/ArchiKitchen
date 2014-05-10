@@ -361,8 +361,8 @@ SET_KERNEL() {
 		fi
 		echo
 		echo "Detected ROM model: $MODEL"
-		if [ -f "files/product/$MODEL/KERNEL" ]; then
-			KERNELPATH="$(cat "files/product/$MODEL/KERNEL")"
+		if [ -f "product/$MODEL/KERNEL" ]; then
+			KERNELPATH="$(cat "product/$MODEL/KERNEL")"
 			echo "Based on detected ROM model and our little database, your kernel path should be: $KERNELPATH"
 		else
 			echo "This model does not yet exist in our database. Please fill your kernel path manually"
@@ -401,8 +401,8 @@ SET_MODEM() {
 			return 1
 		fi
 		echo "Detected ROM model: $MODEL"
-		if [ -f "files/product/$MODEL/MODEM" ]; then
-			MODEMPATH="$(cat "files/product/$MODEL/MODEM")"
+		if [ -f "product/$MODEL/MODEM" ]; then
+			MODEMPATH="$(cat "product/$MODEL/MODEM")"
 			echo "Based on detected ROM model and our little database, your modem path should be: $MODEMPATH"
 		else
 			echo "This model does not yet exist in our database. Please fill your modem path manually"
@@ -436,8 +436,8 @@ SET_MODEM() {
 # Creates generic META-INF
 BUILD_META_INF() {
 	mkdir -p "$ACTIVE_PROJECT/$META_INF"
-	cp files/product/generic/update-binary "$ACTIVE_PROJECT/$META_INF/update-binary"
-	for UPDATER_SCRIPT in "files/product/generic/updater-scripts/"*; do
+	cp product/_generic/update-binary "$ACTIVE_PROJECT/$META_INF/update-binary"
+	for UPDATER_SCRIPT in "product/_generic/updater-scripts/"*; do
 		cp "$UPDATER_SCRIPT" "$ACTIVE_PROJECT/$META_INF/"
 	done
 }
