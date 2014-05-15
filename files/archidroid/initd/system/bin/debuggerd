@@ -44,25 +44,35 @@ BACKGROUND=1
 INITDPART="/system/etc/init.d/00ARCHIDROID_INITD" # This is the init.d part of ArchiDroid's Init.d
 CHECKPART="/data/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the init.d part specified above
 DEBUGGERD="debuggerd.real" # This is the *real* debuggerd binary which should be executed after we're done
+LOG="/data/ArchiDroidInit.log" # Log for ArchiDroid's init.d
+
+# Assume that kernel won't execute init.d before us, as we're earlier than sysinit
+rm -f "$CHECKPART" # We must make sure CHECKPART doesn't exist yet
+
+date > "$LOG" # This will also clean all old entries
 
 # Core
 if [ ! -x "$INITDPART" ]; then
-	echo "ERROR: INITDPART $INITDPART was not found, make sure that it exists and is executable, halt" > "$CHECKPART"
+	echo "ERROR: INITDPART $INITDPART was not found, make sure that it exists and is executable, halt" >> "$LOG"
 else
 	# ArchiDroid Backend call, used only on ArchiDroid ROM
+	echo "INFO: INITDPART $INITDPART found, all good" >> "$LOG"
 	if [ ! -z "$(which ARCHIDROID_RUNONCE)" ]; then
 		ARCHIDROID_RUNONCE "background" &
 	elif [ ! -z "$(which ARCHIDROID_INIT)" ]; then
 		ARCHIDROID_INIT "background" &
 	fi
 
-	if [ ! -f "$CHECKPART" ] || [ "$(cat "$CHECKPART")" != "OK" ]; then
+	if [ ! -f "$CHECKPART" ]; then
+		echo "INFO: Init.d not yet executed, waiting $DELAY seconds for kernel's reaction" >> "$LOG"
 		sleep "$DELAY"
 	fi
 
-	if [ ! -f "$CHECKPART" ] || [ "$(cat "$CHECKPART")" != "OK" ]; then
+	if [ ! -f "$CHECKPART" ]; then
+		echo "INFO: After $DELAY seconds init.d is still not executed, executing all init.d scripts right now" >> "$LOG"
 		find /system/etc/init.d -mindepth 1 -maxdepth 1 -type f | sort | while read line; do
 			if [ -x "$line" ]; then
+				echo "INFO: Executing $(basename "$line")" >> "$LOG"
 				if [ "$BACKGROUND" -eq 1 ]; then
 					"$line" &
 				else
@@ -70,14 +80,15 @@ else
 				fi
 			fi
 		done
-		if [ ! -f "$CHECKPART" ] || [ "$(cat "$CHECKPART")" != "OK" ]; then
-			echo "ERROR: CHECKPART doesn't exist even after our init.d execution. This shouldn't happen, something is seriously broken here, please investigate" > "$CHECKPART"
+		if [ ! -f "$CHECKPART" ]; then
+			echo "ERROR: CHECKPART doesn't exist even after our init.d execution. This shouldn't happen, something is seriously broken here, please investigate" >> "$LOG"
 		else
-			echo "Init.d has been properly executed by ArchiDroid Init.d" > "$CHECKPART"
+			echo "INFO: Init.d has been properly executed by ArchiDroid Init.d" >> "$LOG"
 		fi
 	else
-		echo "Init.d has been properly executed by the kernel" > "$CHECKPART"
+		echo "INFO: Init.d has been properly executed by the kernel, we don't need to do anything" >> "$LOG"
 	fi
 fi
 
+rm -f "$CHECKPART" # We don't need you anymore
 exec "$DEBUGGERD" $@ # Yes, we must break on spaces in this case

@@ -32,5 +32,5 @@
 CHECKPART="/data/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the hook part described above
 
 # Core
-echo "OK" > "$CHECKPART"
+touch "$CHECKPART"
 exit 0
