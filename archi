@@ -819,11 +819,10 @@ ZIPALIGN_APK() {
 # Zipaligns everything
 ZIPALIGN() {
 	if [ "$FULLPERFORMANCE" -eq 1 ]; then
-		find "$ACTIVE_PROJECT/system" -type f -iname "*.apk" | while read APK; do
+		find "$ACTIVE_PROJECT/system" -type f -iname "*.apk" | (while read APK; do
 			ZIPALIGN_APK "$APK" &
 		done
-		wait
-		sleep 1
+		wait)
 	else
 		find "$ACTIVE_PROJECT/system" -type f -iname "*.apk" | while read APK; do
 			ZIPALIGN_APK "$APK"
