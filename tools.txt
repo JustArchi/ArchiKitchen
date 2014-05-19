@@ -4,5 +4,5 @@ Also, for a reference where to search for updates
 [Bak]smali 2.0.3 - https://bitbucket.org/JesusFreke/smali/downloads
 Busybox 1.22.1, 15 April - https://play.google.com/store/apps/details?id=stericson.busybox
 Kernel repack tools 9260ca90b5 - https://github.com/osm0sis/mkbootimg
-SuperSU 1.94 - http://download.chainfire.eu/supersu
+SuperSU 1.97 - http://download.chainfire.eu/supersu
 Zipalign R22.6.2 - http://developer.android.com/sdk/index.html
