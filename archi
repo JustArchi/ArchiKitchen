@@ -212,7 +212,7 @@ SET_OLDPROJECT() {
 	echo "=-=-=-=-=-=-=-=-="
 	echo "Found total of $COUNT projects"
 	if [ "$COUNT" -eq 1 ]; then
-		ACTIVE_PROJECT="$LASTFOUND" # If we have only one project, there's nothing to choose from, so we can save some precious seconds
+		ACTIVE_PROJECT="$(basename $LASTFOUND)" # If we have only one project, there's nothing to choose from, so we can save some precious seconds
 		return 0
 	fi
 	echo "Write a name of any from the projects detected above or 'x' to go back"
@@ -220,6 +220,7 @@ SET_OLDPROJECT() {
 	case "$CHOICE" in
 		x|X) return ;;
 		*)
+			CHOICE="$(basename "$CHOICE")"
 			if [ -d "$CHOICE" ]; then
 				ACTIVE_PROJECT="$CHOICE"
 			else
@@ -545,7 +546,7 @@ FIX_SYMLINKS() {
 				SYMLINK="$(echo "$SYMLINK" | cut -d'"' -f2)"
 				if [ -z "$SYMLINK" ]; then
 					continue
-				elif [ ! -e "$ACTIVE_PROJECT$SYMLINK" ] && [ ! -e "$ACTIVE_PROJECT$SYMLINKDIR/$SYMLINK" ]; then
+				elif [ ! -e "$ACTIVE_PROJECT$SYMLINKDIR/$SYMLINK" ]; then
 					echo "$SYMLINK" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 					grep -v "$SYMLINK" "$ACTIVE_PROJECT/updater-script-TEMP" > "$ACTIVE_PROJECT/updater-script-TEMP2"
 					mv -f "$ACTIVE_PROJECT/updater-script-TEMP2" "$ACTIVE_PROJECT/updater-script-TEMP"
@@ -566,31 +567,50 @@ FIX_SYMLINKS() {
 			echo ""
 	esac
 
-	echo "We can also add local symlinks from your project, these are available only if your project is based on stock image"
-	echo "It's usually a good idea to add missing symlinks, if they're available, in worst case we won't be able to find anything"
+	echo "We can also add local symlinks from your project, these are available only if your project is based on stock image and contains symlinks inside"
+	echo "It's usually a very good idea to add local symlinks, if they're available, in worst case we won't be able to find anything"
 	read -p "Do you want to include local symlinks? [Y/n]: " CHOICE
 	case "$CHOICE" in
 		n|N) ;;
 		*)
 			local TARGET=""
 			local REALPATH=""
-			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+			rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST" "$ACTIVE_PROJECT/updater-script-TEMP-FOUNDSYMLINKS"
 			echo "" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+			local MAGIC="0"
 			find "$ACTIVE_PROJECT/" -type l | sort | while read SYMLINK; do
 				TARGET="$(readlink "$SYMLINK")"
-				REALPATH="/" # TODO: We can assume that we have only one slash (/) before the right pattern ($ACTIVE_PROJECT)
-				REALPATH+="$(echo "$SYMLINK" | cut -d'/' -f2-)" # If there's a way to determine that without making such assumption, it would be great
-				echo "symlink(\"$TARGET\", \"$REALPATH\");" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+				if [ "$MAGIC" -eq 0 ]; then
+					# Find proper path
+					for ((I=1 ;; I++)); do
+						if [ "$(echo "$SYMLINK" | cut -d'/' -f$I)" = "$ACTIVE_PROJECT" ]; then
+							MAGIC="$(($I+1))" # We found where ACTIVE_PROJECT is, so now we can set MAGIC right for the next folder
+							break
+						fi
+					done
+				fi
+				REALPATH="/"
+				REALPATH+="$(echo "$SYMLINK" | cut -d'/' -f$MAGIC-)"
+				echo "symlink(\"$TARGET\", \"$REALPATH\");" >> "$ACTIVE_PROJECT/updater-script-TEMP-FOUNDSYMLINKS"
 				echo "$REALPATH -> $TARGET" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			done
 			if [ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]; then
-				echo "No local symlinks found, it looks like your build is not based on stock image"
+				echo "No local symlinks found, it looks like your build is not based on stock image or local symlinks have been added already"
 			else
-				echo "OK, following local symlinks have been added to your updater-script: "
+				echo "Found symlinks:"
 				echo "-=-= ADDED SYMLINKS START =-=-"
 				cat "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 				echo "-=-= ADDED SYMLINKS EOF =-=-"
 				rm -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
+				PRESS_ENTER
+				echo "We managed to find local symlinks. Therefore, if the list is complete we don't need to include all generic symlinks, but just found ones"
+				echo "This will result in exact 1:1 copy of all symlinks which are available in system.img, without adding extra ones"
+				echo "It's usually a very good idea to keep only found symlinks instead of the whole list, but you may also want to append them to the generic databse instead of making 1:1 copy"
+				read -p "Do you want to include only symlinks that were found? [Y/n]: " CHOICE
+				case "$CHOICE" in
+					n|N) echo "OK, your symlinks have been appended to the generic list"; cat "$ACTIVE_PROJECT/updater-script-TEMP-FOUNDSYMLINKS" >> "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"; rm -f "$ACTIVE_PROJECT/updater-script-TEMP-FOUNDSYMLINKS" ;;
+					*) echo "OK, updater-script now uses only symlinks that were found"; mv -f "$ACTIVE_PROJECT/updater-script-TEMP-FOUNDSYMLINKS" "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
+				esac
 			fi
 			PRESS_ENTER
 			echo ""
