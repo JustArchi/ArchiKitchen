@@ -582,10 +582,9 @@ FIX_SYMLINKS() {
 				TARGET="$(readlink "$SYMLINK")"
 				if [ "$MAGIC" -eq 0 ]; then
 					# Find proper path
-					for ((I=1 ;; I++)); do
+					for ((I=1; MAGIC==0; I++)); do
 						if [ "$(echo "$SYMLINK" | cut -d'/' -f$I)" = "$ACTIVE_PROJECT" ]; then
-							MAGIC="$(($I+1))" # We found where ACTIVE_PROJECT is, so now we can set MAGIC right for the next folder
-							break
+							MAGIC="$((I+1))" # We found where ACTIVE_PROJECT is, so now we can set MAGIC right for the next folder
 						fi
 					done
 				fi
