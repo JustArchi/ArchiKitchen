@@ -212,7 +212,7 @@ SET_OLDPROJECT() {
 	echo "=-=-=-=-=-=-=-=-="
 	echo "Found total of $COUNT projects"
 	if [ "$COUNT" -eq 1 ]; then
-		ACTIVE_PROJECT="$(basename $LASTFOUND)" # If we have only one project, there's nothing to choose from, so we can save some precious seconds
+		ACTIVE_PROJECT="$(basename "$LASTFOUND")" # If we have only one project, there's nothing to choose from, so we can save some precious seconds
 		return 0
 	fi
 	echo "Write a name of any from the projects detected above or 'x' to go back"
