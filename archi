@@ -28,6 +28,7 @@ VERSION="1.0" # Unused
 TOOLS=(which whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
 XDALINK="http://forum.xda-developers.com/showthread.php?t=2597220"
 GITHUBLINK="https://github.com/JustArchi/ArchiKitchen.git"
+AUTOUPDATE="1" # Defines if we should turn on auto updates, if available
 GITHUBBRANCH="master"
 NEEDEDGIT="1.8"
 
@@ -1197,8 +1198,17 @@ cd "$(dirname "$0")"
 # This is only required if user downloaded zip and permissions are broken (f.e. due to moving files from windows => linux)
 chmod -R 755 tools
 
+# Parse args
+for ARG in "$@"; do
+	case "$ARG" in
+		"t") AUTOUPDATE="0"; SET_OLDPROJECT ;; # Doesn't check for updates and automatically loads old project, for me to allow faster debugging and testing :)
+	esac
+done
+
 # Check for updates
-CHECK_UPDATE
+if [ "$AUTOUPDATE" -eq 1 ]; then
+	CHECK_UPDATE
+fi
 
 while :; do
 	clear
