@@ -1,3 +1,4 @@
+symlink("debuggerd", "/system/bin/csview");
 symlink("dumpstate", "/system/bin/dumpcrash");
 symlink("libGLESv2.so", "/system/lib/libGLESv3.so");
 symlink("logcat", "/system/bin/lolcat");
@@ -73,3 +74,4 @@ symlink("toolbox", "/system/bin/uptime");
 symlink("toolbox", "/system/bin/vmstat");
 symlink("toolbox", "/system/bin/watchprops");
 symlink("toolbox", "/system/bin/wipe");
+symlink("wiperiface_v02", "/system/bin/wiperiface");
