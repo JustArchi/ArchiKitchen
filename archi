@@ -1163,7 +1163,7 @@ CHECK_UPDATE() {
 			git --no-pager log --abbrev-commit --decorate --date=relative --pretty=format:'%C(bold red)%h%Creset %C(bold green)(%cr)%Creset - %C(bold yellow)%s%Creset %C(bold blue)commited by%Creset %C(bold cyan)%an%Creset' "$OLDHEAD..$HEAD"
 			echo # Beacause git log doesn't finish with newline
 			echo "=========="
-			git pull -q "$REPO" "$GITHUBBRANCH" >/dev/null 2>&1 || (echo; echo "WARNING: ArchiDroid could not apply update due to conflicts, forced update mode will be used now. Please make proper backups if you need any of your past projects before going to the next step"; PRESS_ENTER; git reset -q --hard; git clean -qfd; git pull -q "$REPO" "$GITHUBBRANCH")
+			git pull -q "$REPO" "$GITHUBBRANCH" >/dev/null 2>&1 || (echo; echo "WARNING: ArchiKitchen could not apply update due to conflicts, forced update mode will be used now. Please make proper backups if you need any of your past projects before going to the next step"; PRESS_ENTER; git reset -q --hard; git clean -qfd; git pull -q "$REPO" "$GITHUBBRANCH")
 			echo "ArchiKitchen has been updated, it will now restart itself"
 			PRESS_ENTER
 			exec "$0"
