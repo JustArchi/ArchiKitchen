@@ -109,6 +109,27 @@ GREP_DELETE_WORD() {
 	grep -v "$1" "$2" > "$2.tmp" && mv -f "$2.tmp" "$2"
 }
 
+# Deletes files/folders based on given blacklist
+BLACKLIST_REMOVE() {
+	if [ -f "files/$1/blacklist_folders.txt" ]; then
+		while read line; do
+			if [ -d "$ACTIVE_PROJECT$line" ]; then
+				echo "Removing $line"
+				rm -rf "$ACTIVE_PROJECT$line"
+			fi
+		done < "files/$1/blacklist_folders.txt"
+	fi
+
+	if [ -f "files/$1/blacklist_everything.txt" ]; then
+		while read line; do
+			if [ -e "$ACTIVE_PROJECT$line" ]; then
+				echo "Removing $line"
+				rm -rf "$ACTIVE_PROJECT$line"
+			fi
+		done < "files/$1/blacklist_everything.txt"
+	fi
+}
+
 # Tries to mount chosen file
 TRY_MOUNT() {
 	# $1 - File to mount
@@ -910,21 +931,7 @@ BUSYBOX() {
 # Removes KNOX
 REMOVE_KNOX() {
 	echo "Removing KNOX..."
-
-	while read line; do
-		if [ -f "$ACTIVE_PROJECT$line" ]; then
-			echo "Removing $line"
-			rm -f "$ACTIVE_PROJECT$line"
-		fi
-	done < "files/knox/blacklist_files.txt"
-
-	while read line; do
-		if [ -d "$ACTIVE_PROJECT$line" ]; then
-			echo "Removing $line"
-			rm -rf "$ACTIVE_PROJECT$line"
-		fi
-	done < "files/knox/blacklist_folders.txt"
-
+	BLACKLIST_REMOVE "knox"
 	echo "Done, your ROM should not contain any KNOX apps/folders anymore"
 	PRESS_ENTER
 }
