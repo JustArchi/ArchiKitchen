@@ -4,7 +4,7 @@
 #  / ___ \| | | (__| | | | | . \| | || (__| | | |  __/ | | |
 # /_/   \_\_|  \___|_| |_|_|_|\_\_|\__\___|_| |_|\___|_| |_|
 #
-# Copyright 2014 £ukasz "JustArchi" Domeradzki
+# Copyright 2014 ≈Åukasz "JustArchi" Domeradzki
 # Contact: JustArchi@JustArchi.net
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
