@@ -1,3 +1,9 @@
+/system/etc/secure_storage/com.sec.knox.seandroid
+/system/etc/secure_storage/com.sec.knox.store
+/system/container
+/system/containers
+/system/preloadedsso
+
 /system/app/Bridge.apk
 /system/app/Bridge.odex
 /system/app/ContainerAgent.apk

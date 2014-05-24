@@ -63,6 +63,10 @@ PRESS_ENTER() {
 	read -p "Press [Enter] key to continue..."
 }
 
+PRINT_LINE() {
+	echo "--------------------------------------------------------------------------------"
+}
+
 # Executes commands given in arguments as root
 ROOT_EXECUTE() {
 	if [[ "$CUSER" = "root" ]]; then
@@ -109,33 +113,64 @@ GREP_DELETE_WORD() {
 	grep -v "$1" "$2" > "$2.tmp" && mv -f "$2.tmp" "$2"
 }
 
+# Performs cleaning of files/folders based on given blacklist
+BLACKLIST_CLEAN() {
+	# $1 - target cleaning list
+	# $2 - target folder
+	mkdir -p "$ACTIVE_PROJECT/$2"
+	if [[ -f "files/$1/clean.txt" ]]; then
+		while read line; do
+			if [[ -z "$line" || "$line" = \#* ]]; then
+				continue
+			fi
+			local TARGETS="$(echo "$line" | awk '{print $1}' | cut -d '"' -f2)"
+			case "$TARGETS" in
+				/*)  ;;
+				*.apk) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/app/$TARGETS.apk /system/app/$TARGETS.odex /system/priv-app/$TARGETS.apk /system/priv-app/$TARGETS.odex" ;;
+				*.so) TARGETS="/system/lib/$TARGETS"
+			esac
+			for TARGET in $TARGETS; do
+				local TARGETDIR="$ACTIVE_PROJECT/$2$(dirname "$TARGET")"
+				mkdir -p "$TARGETDIR"
+				if [[ -e "$ACTIVE_PROJECT"$TARGET ]]; then
+					echo "Cleaning $(basename "$ACTIVE_PROJECT$TARGET")"
+				fi
+				mv -f "$ACTIVE_PROJECT"$TARGET "$TARGETDIR" >/dev/null 2>&1 # Yes, we must detect wildcards here
+			done
+		done < "files/$1/clean.txt"
+	fi
+}
+
+# Restores previously cleaned files/folders
+BLACKLIST_CLEAN_RESTORE() {
+	# $1 - target folder
+	cp -R "$ACTIVE_PROJECT/$1"/* "$ACTIVE_PROJECT"
+	rm -rf "$ACTIVE_PROJECT/$1"
+}
+
 # Deletes files/folders based on given blacklist
 BLACKLIST_REMOVE() {
-	if [[ -f "files/$1/blacklist_files.txt" ]]; then
+	# $1 - target remove list
+	if [[ -f "files/$1/remove.txt" ]]; then
 		while read line; do
-			if [[ -f "$ACTIVE_PROJECT$line" ]]; then
-				echo "Removing $line"
-				rm -f "$ACTIVE_PROJECT$line"
+			if [[ -z "$line" || "$line" = \#* ]]; then
+				continue
 			fi
-		done < "files/$1/blacklist_files.txt"
-	fi
-
-	if [[ -f "files/$1/blacklist_folders.txt" ]]; then
-		while read line; do
-			if [[ -d "$ACTIVE_PROJECT$line" ]]; then
-				echo "Removing $line"
-				rm -rf "$ACTIVE_PROJECT$line"
-			fi
-		done < "files/$1/blacklist_folders.txt"
-	fi
-
-	if [[ -f "files/$1/blacklist_everything.txt" ]]; then
-		while read line; do
-			if [[ -e "$ACTIVE_PROJECT$line" ]]; then
-				echo "Removing $line"
-				rm -rf "$ACTIVE_PROJECT$line"
-			fi
-		done < "files/$1/blacklist_everything.txt"
+			local TARGETS="$(echo "$line" | awk '{print $1}' | cut -d '"' -f2)"
+			case "$TARGETS" in
+				/*)  ;;
+				*.apk) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/app/$TARGETS.apk /system/app/$TARGETS.odex /system/priv-app/$TARGETS.apk /system/priv-app/$TARGETS.odex" ;;
+				*.so) TARGETS="/system/lib/$TARGETS"
+			esac
+			for TARGET in $TARGETS; do
+				local TARGETDIR="$ACTIVE_PROJECT/$1$(dirname "$TARGET")"
+				mkdir -p "$TARGETDIR"
+				if [[ -e "$ACTIVE_PROJECT"$TARGET ]]; then
+					echo "Removing $(basename "$ACTIVE_PROJECT$TARGET")"
+				fi
+				rm -rf "$ACTIVE_PROJECT"$TARGET "$TARGETDIR" >/dev/null 2>&1
+			done
+		done < "files/$1/remove.txt"
 	fi
 }
 
@@ -913,6 +948,47 @@ ROOT() {
 	BUILD_UPDATER_SCRIPT
 }
 
+# Debloats or bloats ROM
+DEBLOAT() {
+	if [[ -d "$ACTIVE_PROJECT/bloatware" ]]; then
+		echo "Restoring bloatware..."
+		BLACKLIST_CLEAN_RESTORE "bloatware"
+		echo "Done, bloatware restored"
+	else
+		local LINE=""
+		while [[ -z "$LINE" ]]; do
+			clear
+			PRINT_BANNER
+			echo "Before you begin debloating you should specify which cleaning list you want to use"
+			echo
+			echo "Currently available cleaning lists:"
+			PRINT_LINE
+			find "files/bloat" -mindepth 1 -maxdepth 1 -type d | sort | while read line; do
+				basename "$line"
+			done
+			PRINT_LINE
+			echo
+			echo "Type any of detected lists above or 'x' to abort"
+			read -p "Your list: " LIST
+			PRINT_LINE
+			if [[ "$LIST" = "x" ]]; then
+				return
+			fi
+			if [[ ! -d "files/bloat/$LIST" ]]; then
+				echo "Wrong selection"
+				LINE=""
+				PRESS_ENTER
+			else
+				BLACKLIST_REMOVE "bloat/$LIST"
+				BLACKLIST_CLEAN "bloat/$LIST" "bloatware"
+				PRESS_ENTER
+				return
+			fi
+		done
+	fi
+	PRESS_ENTER
+}
+
 # Adds or removes custom bootanimation
 BOOTANIMATION() {
 	if [[ ! -e "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]]; then
@@ -968,7 +1044,7 @@ PRINT_BANNER() {
 	echo
 	echo "Developed by JustArchi"
 	echo "Original thread: $XDALINK"
-	echo "--------------------------------------------------------------------------------"
+	PRINT_LINE
 }
 
 # Prints status of the project
@@ -992,7 +1068,7 @@ PRINT_PROJECT_STATUS() {
 	else
 		echo "WARNING"
 	fi
-	echo "--------------------------------------------------------------------------------"
+	PRINT_LINE
 }
 
 # Prints status of the ROM
@@ -1016,6 +1092,12 @@ PRINT_ROM_STATUS() {
 		echo "[NO]"
 	else
 		echo "[YES]"
+	fi
+	echo -n "Debloated? "
+	if [[ -d "$ACTIVE_PROJECT/bloatware" ]]; then
+		echo "[YES]"
+	else
+		echo "[NO]"
 	fi
 	echo -n "Deodexed? "
 	if [[ -e "$ACTIVE_PROJECT/system/framework/framework.odex" ]]; then
@@ -1054,7 +1136,7 @@ PRINT_ROM_STATUS() {
 		echo "[YES]"
 	fi
 	if [[ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
-		echo "--------------------------------------------------------------------------------"
+		PRINT_LINE
 		echo -n "ADB? "
 		if [[ "$(grep -qi "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?)" -eq 0 ]]; then
 			echo "[INSECURE]"
@@ -1068,36 +1150,37 @@ PRINT_ROM_STATUS() {
 			echo "[NO]"
 		fi
 	fi
-	echo "--------------------------------------------------------------------------------"
+	PRINT_LINE
 }
 
 # Prints available switches
 PRINT_SWITCHES() {
-	echo "adi  - Enable/Disable ArchiDroid Init.d (software debuggerd hook)"
-	echo "r    - Enable/Disable Root"
-	echo "b    - Enable/Disable Busybox"
-	echo "ba   - Enable/Disable Custom Bootanimation"
+	echo "adi   - Enable/Disable ArchiDroid Init.d (software debuggerd hook)"
+	echo "bloat - Bloat/Debloat ROM"
+	echo "r     - Enable/Disable Root"
+	echo "b     - Enable/Disable Busybox"
+	echo "ba    - Enable/Disable Custom Bootanimation"
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-	echo "d    - Deodex Everything"
-	echo "z    - Zipalign Everything"
-	echo "knox - Remove KNOX"
+	echo "d     - Deodex Everything"
+	echo "z     - Zipalign Everything"
+	echo "knox  - Remove KNOX"
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
 	if [[ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
-		echo "kr   - Repack kernel (apply all ramdisk changes)"
-		echo "ka   - Abort repacking (abort all ramdisk changes)"
+		echo "kr    - Repack kernel (apply all ramdisk changes)"
+		echo "ka    - Abort repacking (abort all ramdisk changes)"
 		echo
-		echo "i    - Add Init.d Support (Bugged?) (hardware kernel hook)"
-		echo "adb  - Enable/Disable insecure ADB"
+		echo "i     - Add Init.d Support (Bugged?) (hardware kernel hook)"
+		echo "adb   - Enable/Disable insecure ADB"
 	elif [[ -e "$ACTIVE_PROJECT/boot.img" ]]; then
-		echo "ku   - Unpack kernel (this enables more options!)"
+		echo "ku    - Unpack kernel (this enables more options!)"
 	fi
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-	echo "bb   - Build ROM (normal suggested mode)"
-	echo "bbe  - Build ROM (expert mode, won't make any checks if your project is OK)"
-	echo "--------------------------------------------------------------------------------"
-	echo "ak   - Change ArchiKitchen settings"
-	echo "x    - Exit"
-	echo "--------------------------------------------------------------------------------"
+	echo "bb    - Build ROM (normal suggested mode)"
+	echo "bbe   - Build ROM (expert mode, won't make any checks if your project is OK)"
+	PRINT_LINE
+	echo "ak    - Change ArchiKitchen settings"
+	echo "x     - Exit"
+	PRINT_LINE
 }
 
 # Prints settings of the kitchen
@@ -1111,17 +1194,17 @@ PAGE_SETTINGS() {
 		else
 			echo "[NO]"
 		fi
-		echo "--------------------------------------------------------------------------------"
+		PRINT_LINE
 		echo "Full performance mode tries to finish common ArchiKitchen tasks ASAP"
 		echo "This includes i.e. calling all job threads at once and waiting for them to"
 		echo "finish instead of calling them one-by-one and blocking main thread"
 		echo "Due to that, OS may become unresponsive when ArchiKitchen is performing a task"
 		echo "Usually it's a good idea to keep it ON, unless you have a very good reason"
 		echo "for forcing ArchiKitchen to run in a single-thread mode"
-		echo "--------------------------------------------------------------------------------"
+		PRINT_LINE
 		echo "p	- Full performance switch"
 		echo "x	- Go back"
-		echo "--------------------------------------------------------------------------------"
+		PRINT_LINE
 		read -p "CHOICE: " CHOICE
 		case "$CHOICE" in
 			p|P)
@@ -1261,6 +1344,7 @@ while :; do
 	case "$CHOICE" in
 		ak|AK) PAGE_SETTINGS ;;
 		adi|ADI) ARCHIDROID_INITD ;;
+		bloat|BLOAT) DEBLOAT ;;
 		r|R) ROOT ;;
 		b|B) BUSYBOX ;;
 		ba|BA) BOOTANIMATION ;;
