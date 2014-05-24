@@ -115,7 +115,7 @@ BLACKLIST_REMOVE() {
 		while read line; do
 			if [[ -f "$ACTIVE_PROJECT$line" ]]; then
 				echo "Removing $line"
-				rm -rf "$ACTIVE_PROJECT$line"
+				rm -f "$ACTIVE_PROJECT$line"
 			fi
 		done < "files/$1/blacklist_files.txt"
 	fi
