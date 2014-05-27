@@ -163,12 +163,10 @@ BLACKLIST_REMOVE() {
 				*.so) TARGETS="/system/lib/$TARGETS"
 			esac
 			for TARGET in $TARGETS; do
-				local TARGETDIR="$ACTIVE_PROJECT/$1$(dirname "$TARGET")"
-				mkdir -p "$TARGETDIR"
 				if [[ -e "$ACTIVE_PROJECT"$TARGET ]]; then
 					echo "Removing $(basename "$ACTIVE_PROJECT$TARGET")"
 				fi
-				rm -rf "$ACTIVE_PROJECT"$TARGET "$TARGETDIR" >/dev/null 2>&1
+				rm -rf "$ACTIVE_PROJECT"$TARGET >/dev/null 2>&1 # Yes, we must detect wildcards here
 			done
 		done < "files/$1/remove.txt"
 	fi
