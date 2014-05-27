@@ -1,3 +1,4 @@
+Magazines.apk
 Flipboard.apk
 BCService.apk
 BestFace.apk

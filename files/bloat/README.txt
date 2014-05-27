@@ -25,7 +25,7 @@ Every cleaning list may contain two files inside:
 - clean.txt -> Files/folders from this list will be moved to $ACTIVE_PROJECT/bloatware folder. They WILL be included in output .zip but WON'T be flashed. "Bloating" after debloating is possible.
 - remove.txt -> Files/folders from this list will be removed permanently from the $ACTIVE_PROJECT. "Bloating" is not possible after debloating.
 
-So if you want to give your user freedom in restoring APKs from output .zip, i.e. through AROMA. Use clean.txt
+So if you want to give your users freedom in restoring APKs from output .zip, i.e. through AROMA. Use clean.txt
 If you simply want to remove permanently bloatware from your ROM, use remove.txt
 
 You may also use both clean.txt and remove.txt. For example I'm using such combination for removing all installable Google APKs from the market while only cleaning Samsung APKs.
