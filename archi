@@ -787,6 +787,8 @@ BUILD() {
 		FIX_PERMISSIONS
 		FIX_SYMLINKS
 		BUILD_UPDATER_SCRIPT
+		SED_CHANGE_WORD "313371337" "$(find "$ACTIVE_PROJECT/system" -type f | wc -l)" "$ACTIVE_PROJECT/$META_INF/updater-script" # This will change our temporary int in progress to a number of all files in system directory, making progress bar truly reliable
+		PRESS_ENTER
 		echo "Sometimes kitchen may produce an incorrect updater-script file, that's why you're asked to review updater-script and eventually fix it if needed BEFORE building ROM"
 		echo "Updater-script is based on so-called 'segments' available in the same directory - $META_INF"
 		echo "Are you ready?"
