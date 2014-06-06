@@ -177,7 +177,7 @@ TRY_MOUNT() {
 	# $1 - File to mount
 	# $2 - Directory to mount file into
 	echo "Trying to mount $(basename "$1")"
-	mkdir -p /tmp/ArchiKitchenLOOP
+	mkdir -p "$2"
 	echo "Stage 1: Mounting with automatic filesystem..."
 	ROOT_EXECUTE "mount -t auto -o loop $1 $2"
 	if [[ $? -eq 0 ]]; then
@@ -185,6 +185,7 @@ TRY_MOUNT() {
 		return 0
 	fi
 	echo "Failed!"
+	ROOT_EXECUTE "umount "$2" >/dev/null 2>&1"
 	echo "Stage 2: Checking if image is in special sparse ext4 format available for conversion..."
 	if [[ "$(od -A n -h -N 5 "$1" | sed 's/ //g')" = "ff3aed260001" ]]; then
 		echo "Yes it is!"
