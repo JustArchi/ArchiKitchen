@@ -368,7 +368,7 @@ NEWPROJECT_STOCK() {
 	TRY_MOUNT "$ACTIVE_PROJECT/system.img" "/tmp/ArchiKitchenLOOP" || (DEL_PROJECT; return 1)
 	echo "Extracting everything from mounted system partition..."
 	ROOT_EXECUTE "cp -R /tmp/ArchiKitchenLOOP/* $ACTIVE_PROJECT/system/"
-	umount /tmp/ArchiKitchenLOOP
+	ROOT_EXECUTE "umount /tmp/ArchiKitchenLOOP"
 	rm -f "$ACTIVE_PROJECT/system.img"
 
 	# CACHE
@@ -384,7 +384,7 @@ NEWPROJECT_STOCK() {
 			echo "Extract everything you need from /tmp/ArchiKitchenLOOP before going to the next step"
 			PRESS_ENTER
 		fi
-		umount /tmp/ArchiKitchenLOOP
+		ROOT_EXECUTE "umount /tmp/ArchiKitchenLOOP"
 		rm -f "$ACTIVE_PROJECT/cache.img"
 	fi
 
