@@ -135,7 +135,7 @@ BLACKLIST_CLEAN() {
 				if [[ -e "$ACTIVE_PROJECT"$TARGET ]]; then
 					echo "Cleaning $(basename "$ACTIVE_PROJECT$TARGET")"
 				fi
-				mv -f "$ACTIVE_PROJECT$TARGET" "$TARGETDIR" >/dev/null 2>&1 # Yes, we must detect wildcards here
+				mv -f "$ACTIVE_PROJECT"$TARGET "$TARGETDIR" >/dev/null 2>&1 # Yes, we must detect wildcards here
 			done
 		done < "files/$1/clean.txt"
 	fi
@@ -166,7 +166,7 @@ BLACKLIST_REMOVE() {
 				if [[ -e "$ACTIVE_PROJECT"$TARGET ]]; then
 					echo "Removing $(basename "$ACTIVE_PROJECT$TARGET")"
 				fi
-				rm -rf "$ACTIVE_PROJECT$TARGET" >/dev/null 2>&1 # Yes, we must detect wildcards here
+				rm -rf "$ACTIVE_PROJECT"$TARGET >/dev/null 2>&1 # Yes, we must detect wildcards here
 			done
 		done < "files/$1/remove.txt"
 	fi
@@ -185,7 +185,7 @@ TRY_MOUNT() {
 		return 0
 	fi
 	echo "Failed!"
-	ROOT_EXECUTE "umount $2"
+	ROOT_EXECUTE "umount "$2" >/dev/null 2>&1"
 	echo "Stage 2: Checking if image is in special sparse ext4 format available for conversion..."
 	if [[ "$(od -A n -h -N 5 "$1" | sed 's/ //g')" = "ff3aed260001" ]]; then
 		echo "Yes it is!"
