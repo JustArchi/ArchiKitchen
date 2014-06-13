@@ -15,6 +15,3 @@ KNOXStore.apk
 KNOXStub.apk
 KnoxVpnServices.apk
 SPDClient.apk
-
-libknoxdrawglfunction.so
-libknox_encryption.so
