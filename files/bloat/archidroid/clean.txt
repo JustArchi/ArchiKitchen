@@ -89,6 +89,6 @@ S-Voice_Android_phone_H.apk
 /system/wakeupdata
 
 # Only active on ArchiDroid
-#/system/media/audio/ringtones
-#/system/media/audio/alarms
+/system/media/audio/ringtones
+/system/media/audio/alarms
 

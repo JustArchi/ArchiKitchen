@@ -19,6 +19,6 @@ FotaClient.apk
 /system/SW_Configuration.xml
 
 # Only active on ArchiDroid
-#GmsCore.apk
-#Phonesky.apk
-#GoogleServicesFramework.apk
+GmsCore.apk
+Phonesky.apk
+GoogleServicesFramework.apk
