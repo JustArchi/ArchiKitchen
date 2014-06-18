@@ -579,7 +579,7 @@ FIX_PERMISSIONS() {
 					mv -f "$ACTIVE_PROJECT/updater-script-TEMP2" "$ACTIVE_PROJECT/updater-script-TEMP"
 				fi
 			done < "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_PERMISSIONS"
-			if [[ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]]; then
+			if [[ ! -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]]; then
 				echo "No invalid permissions found, your updater-script is clean!"
 				rm -f "$ACTIVE_PROJECT/updater-script-TEMP"
 			else
@@ -616,7 +616,7 @@ FIX_SYMLINKS() {
 					mv -f "$ACTIVE_PROJECT/updater-script-TEMP2" "$ACTIVE_PROJECT/updater-script-TEMP"
 				fi
 			done < "$ACTIVE_PROJECT/$META_INF/$UPDATER_SCRIPT_SYMLINKS"
-			if [[ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]]; then
+			if [[ ! -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]]; then
 				echo "No invalid symlinks found, your updater-script is clean!"
 				rm -f "$ACTIVE_PROJECT/updater-script-TEMP"
 			else
@@ -657,7 +657,7 @@ FIX_SYMLINKS() {
 				echo "symlink(\"$TARGET\", \"$REALPATH\");" >> "$ACTIVE_PROJECT/updater-script-TEMP-FOUNDSYMLINKS"
 				echo "$REALPATH -> $TARGET" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 			done
-			if [[ ! -e "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]]; then
+			if [[ ! -f "$ACTIVE_PROJECT/updater-script-TEMP-LIST" ]]; then
 				echo "No local symlinks found, it looks like your build is not based on stock image or local symlinks have been added already"
 			else
 				echo "Found symlinks:"
@@ -693,12 +693,12 @@ FIX_SYMLINKS() {
 
 # Extracts the kernel
 KERNEL_EXTRACT() {
-	if [[ ! -e "$ACTIVE_PROJECT/kernel" ]]; then
+	if [[ ! -d "$ACTIVE_PROJECT/kernel" ]]; then
 		mkdir -p TEMP
-		if [[ ! -e TEMP/mkbootimg ]]; then
+		if [[ ! -x TEMP/mkbootimg ]]; then
 			cd tools/kernel/mkbootimg
 			make
-			if [[ ! -e mkbootimg || ! -e unpackbootimg ]]; then
+			if [[ ! -x mkbootimg || ! -x unpackbootimg ]]; then
 				echo "ERROR! Something went wrong with compilation of mkbootimg!"
 				PRESS_ENTER
 				return 1
@@ -708,12 +708,12 @@ KERNEL_EXTRACT() {
 			make clean
 			cd ../../..
 		fi
-		if [[ -e "$ACTIVE_PROJECT/boot.img" ]]; then
+		if [[ -f "$ACTIVE_PROJECT/boot.img" ]]; then
 			rm -rf "$ACTIVE_PROJECT/kernel"
 			mkdir -p "$ACTIVE_PROJECT/kernel"
 			TEMP/unpackbootimg -i "$ACTIVE_PROJECT/boot.img" -o "$ACTIVE_PROJECT/kernel"
 			mkdir -p "$ACTIVE_PROJECT/kernel/ramdisk"
-			if [[ -e "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" ]]; then
+			if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" ]]; then
 				cd "$ACTIVE_PROJECT/kernel/ramdisk"
 				#TODO: Handle non-gz ramdisk as well, but not now...
 				gunzip -c ../boot.img-ramdisk.gz | cpio -i
@@ -761,7 +761,7 @@ KERNEL_ABORT() {
 # Adds kernel's Init.d
 INITD() {
 	KERNEL_EXTRACT
-	if [[ -e kernel/ramdisk/init.rc ]]; then
+	if [[ -f kernel/ramdisk/init.rc ]]; then
 		sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' kernel/ramdisk/init.rc
 		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' kernel/ramdisk/init.rc
 		KERNEL_REPACK
@@ -864,7 +864,7 @@ DEODEX() {
 		fi
 		echo "Assembling into classes.dex..."
 		java -Xmx512m -jar tools/smali/smali.jar -a "$API" -o classes.dex out
-		if [[ ! -e classes.dex ]]; then
+		if [[ ! -f classes.dex ]]; then
 			echo "ERROR DEODEXING $FILE, ABORTING!"
 			rm -rf out
 			PRESS_ENTER
@@ -873,7 +873,7 @@ DEODEX() {
 		FILE="$(echo "$FILE" | rev | cut -d'.' -f2- | rev)"
 		local FOUND=0
 		for EXTENSION in "jar" "apk"; do
-			if [[ -e "$FILEDIR/$FILE.$EXTENSION" ]]; then
+			if [[ -f "$FILEDIR/$FILE.$EXTENSION" ]]; then
 				echo "Packing back into $FILE.$EXTENSION..."
 				zip -rq "$FILEDIR/$FILE.$EXTENSION" classes.dex
 				rm -f classes.dex
@@ -921,7 +921,7 @@ ZIPALIGN() {
 
 # Adds or removes ArchiDroid's Init.d
 ARCHIDROID_INITD() {
-	if [[ ! -e "$ACTIVE_PROJECT/system/bin/debuggerd.real" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/bin/debuggerd.real" ]]; then
 		mv -f "$ACTIVE_PROJECT/system/bin/debuggerd" "$ACTIVE_PROJECT/system/bin/debuggerd.real"
 		cp -R files/archidroid/initd/system/* "$ACTIVE_PROJECT/system/"
 		UPDATER_SCRIPT_ADD "files/archidroid/initd/updater-scripts"
@@ -934,7 +934,7 @@ ARCHIDROID_INITD() {
 
 # Adds or removes root
 ROOT() {
-	if [[ ! -e "$ACTIVE_PROJECT/system/xbin/su" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/xbin/su" ]]; then
 		mkdir -p "$ACTIVE_PROJECT/system/xbin"
 		cp -R files/root/system/* "$ACTIVE_PROJECT/system/"
 		cp -R "files/root/$ARCH/"* "$ACTIVE_PROJECT/"
@@ -992,7 +992,7 @@ DEBLOAT() {
 
 # Adds or removes custom bootanimation
 BOOTANIMATION() {
-	if [[ ! -e "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]]; then
 		mv -f "$ACTIVE_PROJECT/system/bin/bootanimation" "$ACTIVE_PROJECT/system/bin/bootanimation.orig"
 		cp -R "files/bootanimation/$ARCH/"* "$ACTIVE_PROJECT/"
 		cp -R files/bootanimation/common/* "$ACTIVE_PROJECT/"
@@ -1004,7 +1004,7 @@ BOOTANIMATION() {
 
 # Adds or removes busybox
 BUSYBOX() {
-	if [[ ! -e "$ACTIVE_PROJECT/system/xbin/busybox" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/xbin/busybox" ]]; then
 		cp -R "files/busybox/$ARCH/"* "$ACTIVE_PROJECT/"
 		UPDATER_SCRIPT_ADD "files/busybox/updater-scripts"
 	else
@@ -1024,7 +1024,7 @@ REMOVE_KNOX() {
 
 # Adds or removes insecure ADB
 ADB() {
-	if [[ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
+	if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
 		if [[ "$(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?)" -eq 0 ]]; then
 			SED_CHANGE_WORD "ro.adb.secure=1" "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
 			SED_CHANGE_WORD "ro.secure=1" "ro.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
@@ -1089,7 +1089,7 @@ PRINT_ROM_STATUS() {
 	echo
 
 	echo -n "ArchiDroid Init.d? "
-	if [[ ! -e "$ACTIVE_PROJECT/system/bin/debuggerd.real" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/bin/debuggerd.real" ]]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
@@ -1101,7 +1101,7 @@ PRINT_ROM_STATUS() {
 		echo "[NO]"
 	fi
 	echo -n "Deodexed? "
-	if [[ -e "$ACTIVE_PROJECT/system/framework/framework.odex" ]]; then
+	if [[ -f "$ACTIVE_PROJECT/system/framework/framework.odex" ]]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
@@ -1113,13 +1113,13 @@ PRINT_ROM_STATUS() {
 		echo "[NO]"
 	fi
 	echo -n "Rooted? "
-	if [[ ! -e "$ACTIVE_PROJECT/system/xbin/su" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/xbin/su" ]]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
 	fi
 	echo -n "Busybox? "
-	if [[ ! -e "$ACTIVE_PROJECT/system/xbin/busybox" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/xbin/busybox" ]]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
@@ -1131,12 +1131,12 @@ PRINT_ROM_STATUS() {
 		echo "[NO]"
 	fi
 	echo -n "Custom Bootanimation? "
-	if [[ ! -e "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]]; then
+	if [[ ! -f "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
 	fi
-	if [[ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
+	if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
 		PRINT_LINE
 		echo -n "ADB? "
 		if [[ "$(grep -qi "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?)" -eq 0 ]]; then
@@ -1166,13 +1166,13 @@ PRINT_SWITCHES() {
 	echo "z     - Zipalign Everything"
 	echo "knox  - Remove KNOX"
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-	if [[ -e "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
+	if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
 		echo "kr    - Repack kernel (apply all ramdisk changes)"
 		echo "ka    - Abort repacking (abort all ramdisk changes)"
 		echo
 		echo "i     - Add Init.d Support (Bugged?) (hardware kernel hook)"
 		echo "adb   - Enable/Disable insecure ADB"
-	elif [[ -e "$ACTIVE_PROJECT/boot.img" ]]; then
+	elif [[ -f "$ACTIVE_PROJECT/boot.img" ]]; then
 		echo "ku    - Unpack kernel (this enables more options!)"
 	fi
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
@@ -1285,24 +1285,22 @@ CHECK_UPDATE() {
 
 clear
 PRINT_BANNER
-echo -n "Please wait"
+echo "Please wait..."
 
 # Before we begin, make sure that all our tools are available
-MISSINGTOOLS=""
-for TOOL in "${TOOLS[@]}"; do
-	echo -n "."
-	if [[ -z "$(which $TOOL)" ]]; then
-		MISSINGTOOLS+=" $TOOL"
-	fi
-done
-echo ""
-
-if [[ ! -z "$MISSINGTOOLS" ]]; then
-	echo "It looks like you don't have required tool(s): $MISSINGTOOLS"
+if [[ "$(which "${TOOLS[@]}" >/dev/null; echo $?)" -ne 0 ]]; then
+	MISSINGTOOLS=""
+	for TOOL in "${TOOLS[@]}"; do
+		if [[ -z "$(which $TOOL)" ]]; then
+			MISSINGTOOLS+=" $TOOL"
+		fi
+	done
+	echo "It looks like you don't have required tool(s):$MISSINGTOOLS"
 	echo "This check was made through 'which' command"
 	echo "Please install missing tool(s) and launch kitchen again"
 	exit 1
 fi
+echo ""
 
 # Check LONG_BIT for determining host architecture
 HOSTARCH="$(getconf LONG_BIT)" # Unused
