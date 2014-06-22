@@ -10,7 +10,9 @@ ContainerEventsRelayManager.apk
 KLMSAgent.apk
 KNOXAgent.apk
 KnoxAttestationAgent.apk
+KnoxMigrationAgent.apk
 KnoxSetupWizardClient.apk
+KnoxSetupWizardStub.apk
 KNOXStore.apk
 KNOXStub.apk
 KnoxVpnServices.apk
