@@ -1308,10 +1308,15 @@ fi
 echo ""
 
 # Check LONG_BIT for determining host architecture
-HOSTARCH="$(getconf LONG_BIT)" # Unused
+HOSTARCH="$(getconf LONG_BIT)"
+case "$HOSTARCH" in
+	64) HOSTARCH="amd64" ;;
+	32) HOSTARCH="i386" ;;
+	*) HOSTARCH="amd64" ;; # Unknown, assume amd64
+esac
 
 # Set common tools
-ZIPALIGN="./tools/zipalign/zipalign"
+ZIPALIGN="./tools/zipalign/$HOSTARCH/zipalign"
 
 # Navigate to our folder, even if user didn't execute it from the root dir
 cd "$(dirname "$0")"
