@@ -729,11 +729,15 @@ KERNEL_EXTRACT() {
 
 # Repacks the kernel from previously extracted one
 KERNEL_REPACK() {
+	local EXTRA=()
 	if [[ -d "$ACTIVE_PROJECT/kernel" ]]; then
 		if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
 			cd "$ACTIVE_PROJECT/kernel/ramdisk"
 			find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
 			cd ../../..
+			if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-dtb" ]]; then
+				EXTRA+=(--dt $ACTIVE_PROJECT/kernel/boot.img-dtb)
+			fi
 			TEMP/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
 			--ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.gz" \
 			--base "$(cat "$ACTIVE_PROJECT/kernel/boot.img-base")" \
@@ -742,6 +746,7 @@ KERNEL_REPACK() {
 			--pagesize "$(cat "$ACTIVE_PROJECT/kernel/boot.img-pagesize")" \
 			--ramdisk_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-ramdiskoff")" \
 			--tags_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-tagsoff")" \
+			"${EXTRA[@]}" \
 			-o "$ACTIVE_PROJECT/temp.img"
 			mv -f "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
 		else
