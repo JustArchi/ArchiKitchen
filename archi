@@ -1292,6 +1292,9 @@ clear
 PRINT_BANNER
 echo "Please wait..."
 
+# Cleaning
+unset CROSS_COMPILE # We're not cross-compiling anything here and it may cause problems with some makefiles
+
 # Before we begin, make sure that all our tools are available
 if [[ "$(which "${TOOLS[@]}" >/dev/null; echo $?)" -ne 0 ]]; then
 	MISSINGTOOLS=""
