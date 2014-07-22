@@ -940,15 +940,30 @@ ARCHIDROID_INITD() {
 # Adds or removes root
 ROOT() {
 	if [[ ! -f "$ACTIVE_PROJECT/system/xbin/su" ]]; then
+		if [[ -f "$ACTIVE_PROJECT/system/etc/install-recovery.sh" ]]; then
+			mv "/system/etc/install-recovery.sh" "/system/etc/install-recovery-2.sh"
+		fi
 		mkdir -p "$ACTIVE_PROJECT/system/xbin"
 		cp -R files/root/system/* "$ACTIVE_PROJECT/system/"
 		cp -R "files/root/$ARCH/"* "$ACTIVE_PROJECT/"
 		cp "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/xbin/daemonsu"
 		mkdir -p "$ACTIVE_PROJECT/system/bin/.ext"
 		cp "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/bin/.ext/.su"
+		if [[ -f "$ACTIVE_PROJECT/system/bin/mksh" ]]; then
+			cp "$ACTIVE_PROJECT/system/bin/mksh" "$ACTIVE_PROJECT/system/xbin/sugote-mksh"
+		else
+			cp "$ACTIVE_PROJECT/system/bin/sh" "$ACTIVE_PROJECT/system/xbin/sugote-mksh"
+		fi
+		cp "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/xbin/sugote"
+
 		UPDATER_SCRIPT_ADD "files/root/updater-scripts"
 	else
-		rm -f "$ACTIVE_PROJECT/system/app/Superuser.apk" "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/xbin/daemonsu" "$ACTIVE_PROJECT/system/bin/.ext/.su" "$ACTIVE_PROJECT/system/etc/init.d/99SuperSUDaemon" "$ACTIVE_PROJECT/system/etc/.installed_su_daemon"
+		if [[ -f "$ACTIVE_PROJECT/system/etc/install-recovery-2.sh" ]]; then
+			mv "$ACTIVE_PROJECT/system/etc/install-recovery-2.sh" "$ACTIVE_PROJECT/system/etc/install-recovery.sh"
+		else
+			rm -f "$ACTIVE_PROJECT/system/etc/install-recovery.sh"
+		fi
+		rm -f "$ACTIVE_PROJECT/system/app/Superuser.apk" "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/xbin/daemonsu" "$ACTIVE_PROJECT/system/bin/.ext/.su" "$ACTIVE_PROJECT/system/etc/init.d/99SuperSUDaemon" "$ACTIVE_PROJECT/system/etc/.installed_su_daemon" "$ACTIVE_PROJECT/system/xbin/sugote-mksh" "$ACTIVE_PROJECT/system/xbin/sugote"
 		UPDATER_SCRIPT_DEL "files/root/updater-scripts"
 	fi
 	BUILD_UPDATER_SCRIPT

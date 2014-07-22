@@ -78,7 +78,7 @@ else
 			echo "INFO: Busybox found, calling busybox run-parts"
 			busybox run-parts /system/etc/init.d
 		else
-			echo "Couldn't find any reliable method for executing init.d, using manual one"
+			echo "INFO: Couldn't find any reliable method for executing init.d, using manual one"
 			find /system/etc/init.d -type f | sort | while read line; do
 				echo "INFO: Executing $(basename "$line")"
 				"$line" &
@@ -94,7 +94,8 @@ else
 	fi
 fi
 
+rm -f "$CHECKPART" # We don't need you anymore
+
 echo "INFO: ArchiDroid Init.d finished"
 date
-rm -f "$CHECKPART" # We don't need you anymore
 exec "$DEBUGGERD" $@ # Yes, we must break on spaces in this case
