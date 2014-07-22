@@ -177,6 +177,7 @@ TRY_MOUNT() {
 	# $1 - File to mount
 	# $2 - Directory to mount file into
 	echo "Trying to mount $(basename "$1")"
+	modprobe loop
 	mkdir -p "$2"
 	echo "Stage 1: Mounting with automatic filesystem..."
 	ROOT_EXECUTE "mount -t auto -o loop $1 $2"
