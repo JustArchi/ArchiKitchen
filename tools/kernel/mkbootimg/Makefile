@@ -26,7 +26,7 @@ mkbootimg-static$(EXE):mkbootimg.o
 	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt $(LDFLAGS) -static -s
 
 mkbootimg.o:mkbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -I. -Werror
+	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -I.
 
 unpackbootimg$(EXE):unpackbootimg.o
 	$(CROSS_COMPILE)$(CC) -o $@ $^ $(LDFLAGS) -s
@@ -35,7 +35,7 @@ unpackbootimg-static$(EXE):unpackbootimg.o
 	$(CROSS_COMPILE)$(CC) -o $@ $^ $(LDFLAGS) -static -s
 
 unpackbootimg.o:unpackbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -Werror
+	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $<
 
 clean:
 	$(RM) mkbootimg mkbootimg-static mkbootimg.o unpackbootimg unpackbootimg-static unpackbootimg.o mkbootimg.exe mkbootimg-static.exe unpackbootimg.exe unpackbootimg-static.exe
