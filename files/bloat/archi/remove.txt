@@ -1,3 +1,4 @@
+Videos.apk
 PlayGames.apk
 ChromeWithBrowser.apk
 GMS_Maps.apk
