@@ -16,4 +16,6 @@ KnoxSetupWizardStub.apk
 KNOXStore.apk
 KNOXStub.apk
 KnoxVpnServices.apk
+RCPComponents.apk
 SPDClient.apk
+UniversalMDMClient.apk
