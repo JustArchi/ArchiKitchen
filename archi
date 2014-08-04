@@ -840,7 +840,57 @@ BUILD() {
 	exit 0
 }
 
-# Deodexes every .odex file
+# Deodexes single file
+DEODEX_FILE() {
+	local ODEX="$(basename "$1")"
+	local FILEDIR="$(dirname "$1")"
+	local FILE="$(echo "$ODEX" | rev | cut -d'.' -f2- | rev)"
+	local FILEEXTENSION=""
+	# Find file that odex relates to
+	for EXTENSION in "apk" "jar"; do
+		if [[ -f "$FILEDIR/$FILE.$EXTENSION" ]]; then
+			FILEEXTENSION="$EXTENSION"
+			break
+		fi
+	done
+	if [[ -z "$FILEEXTENSION" ]]; then
+		echo "ERROR: Can't determine what $ODEX relates to!"
+		return 1
+	fi
+	FILE="$FILE.$FILEEXTENSION"
+	echo "Deodexing $FILE..."
+	# If file is APK and already contains classes.dex, we should delete proper odex file only
+	if [[ "$FILEEXTENSION" = "apk" && "$(unzip -l "$FILEDIR/$FILE" | grep -q "classes.dex"; echo $?)" -eq 0 ]]; then
+		echo "INFO: $FILE contains classes.dex already, removing $ODEX"
+		rm -f "$FILEDIR/$ODEX"
+		return 0
+	fi
+	echo "Disassembling $ODEX..."
+	rm -rf "TEMP/$ODEX"
+	mkdir -p "TEMP/$ODEX"
+	java -jar tools/smali/baksmali.jar -a "$API" -d "$ACTIVE_PROJECT/system/framework" -x "$FILEDIR/$ODEX" -o "TEMP/$ODEX/DECOMPILED"
+	if [[ $? -ne 0 || ! -d "TEMP/$ODEX/DECOMPILED" ]]; then
+		echo "ERROR: Could not deodex $ODEX, aborting!"
+		rm -rf "TEMP/$ODEX"
+		PRESS_ENTER
+		return 1
+	fi
+	echo "Assembling disassembled $ODEX into classes.dex..."
+	java -jar tools/smali/smali.jar -a "$API" -o "TEMP/$ODEX/classes.dex" "TEMP/$ODEX/DECOMPILED"
+	if [[ $? -ne 0 || ! -f "TEMP/$ODEX/classes.dex" ]]; then
+		echo "ERROR: Could not assemble disassembled $ODEX, aborting!"
+		rm -rf "TEMP/$ODEX"
+		PRESS_ENTER
+		return 1
+	fi
+	echo "Packing back classes.dex into $FILE..."
+	zip -jrq "$FILEDIR/$FILE" "TEMP/$ODEX/classes.dex"
+	rm -f "$FILEDIR/$ODEX"
+	rm -rf "TEMP/$ODEX"
+	echo "SUCCESS: $FILE"
+}
+
+# Deodexes everything
 DEODEX() {
 	local API="$(grep "ro.build.version.sdk" "$ACTIVE_PROJECT/system/build.prop" | cut -d'=' -f2)"
 	echo "Detected API level $API"
@@ -856,53 +906,16 @@ DEODEX() {
 			PRESS_ENTER
 			return 1
 	esac
-	find "$ACTIVE_PROJECT" -type f -iname "*.odex" | while read line; do
-		local FILE="$(basename "$line")"
-		local FILEDIR="$(dirname "$line")"
-		echo "Deodexing $FILE"
-		echo "Disassembling $FILE..."
-		java -Xmx512m -jar tools/smali/baksmali.jar -a "$API" -d "$ACTIVE_PROJECT/system/framework" -x "$FILEDIR/$FILE"
-		if [[ $? -ne 0 ]]; then
-			echo "ERROR DEODEXING $FILE, ABORTING!"
-			rm -rf out
-			PRESS_ENTER
-			return 1
-		fi
-		echo "Assembling into classes.dex..."
-		java -Xmx512m -jar tools/smali/smali.jar -a "$API" -o classes.dex out
-		if [[ ! -f classes.dex ]]; then
-			echo "ERROR DEODEXING $FILE, ABORTING!"
-			rm -rf out
-			PRESS_ENTER
-			return 1
-		fi
-		FILE="$(echo "$FILE" | rev | cut -d'.' -f2- | rev)"
-		local FOUND=0
-		for EXTENSION in "jar" "apk"; do
-			if [[ -f "$FILEDIR/$FILE.$EXTENSION" ]]; then
-				echo "Packing back into $FILE.$EXTENSION..."
-				zip -rq "$FILEDIR/$FILE.$EXTENSION" classes.dex
-				rm -f classes.dex
-				FOUND=1
-				break
-			fi
-		done
-		if [[ "$FOUND" -eq 0 ]]; then
-			echo "ERROR, No output found?!"
-			rm -rf out
-			rm -f classes.dex
-			PRESS_ENTER
-			return 1
-		fi
-		rm -f "$line"
-		rm -rf out
+	find "$ACTIVE_PROJECT" -type f -iname "*.odex" | while read ODEX; do
+		DEODEX_FILE "$ODEX" || echo "ERROR: Deodexing failed with $(basename "$ODEX"), aborting!" && break
 	done
 	echo "Deodexing finished"
 	PRESS_ENTER
+	return 0
 }
 
-# Zipaligns single app
-ZIPALIGN_APK() {
+# Zipaligns single file
+ZIPALIGN_FILE() {
 	echo "Zipaligning $(basename "$1")..."
 	"$ZIPALIGN" -f "$ALIGN" "$1" "$1.zipaligned" >/dev/null 2>&1 && mv -f "$1.zipaligned" "$1"
 	return $?
@@ -912,12 +925,12 @@ ZIPALIGN_APK() {
 ZIPALIGN() {
 	if [[ "$FULLPERFORMANCE" -eq 1 ]]; then
 		find "$ACTIVE_PROJECT/system" -type f -iname "*.apk" | (while read APK; do
-			ZIPALIGN_APK "$APK" &
+			ZIPALIGN_FILE "$APK" &
 		done
 		wait)
 	else
 		find "$ACTIVE_PROJECT/system" -type f -iname "*.apk" | while read APK; do
-			ZIPALIGN_APK "$APK"
+			ZIPALIGN_FILE "$APK"
 		done
 	fi
 	echo
