@@ -907,7 +907,7 @@ DEODEX() {
 			return 1
 	esac
 	find "$ACTIVE_PROJECT" -type f -iname "*.odex" | while read ODEX; do
-		DEODEX_FILE "$ODEX" || echo "ERROR: Deodexing failed with $(basename "$ODEX"), aborting!" && break
+		DEODEX_FILE "$ODEX"
 	done
 	echo "Deodexing finished"
 	PRESS_ENTER
