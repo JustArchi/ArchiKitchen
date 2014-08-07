@@ -173,6 +173,36 @@ BLACKLIST_REMOVE() {
 	fi
 }
 
+# Gives user choice in choosing one thing from a few
+PICK_ONE() {
+	# $1 - A folder with subdirectories, which are offered as a choice
+	PICKCHOICE="" # This must be a global variable
+	while [[ -z "$PICKCHOICE" ]]; do
+		PRINT_BANNER
+		echo "Currently available for selection:"
+		PRINT_LINE
+		find "$1" -mindepth 1 -maxdepth 1 -type d | sort | while read line; do
+			basename "$line"
+		done
+		PRINT_LINE
+		echo
+		echo "Type any of above or 'x' to abort"
+		read -p "Your choice: " PICKCHOICE
+		if [[ "$PICKCHOICE" = "x" ]]; then
+			PICKCHOICE=""
+			return
+		fi
+		if [[ ! -d "$1/$PICKCHOICE" ]]; then
+			echo "Wrong selection"
+			PICKCHOICE=""
+			PRESS_ENTER
+		else
+			return 0
+		fi
+	done
+}
+
+
 # Tries to mount chosen file
 TRY_MOUNT() {
 	# $1 - File to mount
@@ -1033,7 +1063,23 @@ BOOTANIMATION() {
 # Adds or removes busybox
 BUSYBOX() {
 	if [[ ! -f "$ACTIVE_PROJECT/system/xbin/busybox" ]]; then
-		cp -R "files/busybox/$ARCH/"* "$ACTIVE_PROJECT/"
+		PRINT_BANNER
+		echo "Busybox is a core provider for many standard GNU/Linux utilities"
+		echo "Here you can specify which busybox you want to add"
+		echo "Stericson's busybox is proven to be stable and work well on stock ROMs with no busybox"
+		echo "On the other hand, CyanogenMod's busybox is more actively developed"
+		echo
+		echo "Please note that:"
+		echo "* CyanogenMod's busybox doesn't work on x86 architecture. If you're cooking ROM for such device, stick with stericson's"
+		echo "* CyanogenMod's busybox requires your device to be NEON-capable, typically CortexA9 and newer devices on armv7l"
+		echo
+		echo "If you don't know what to choose here, I strongly suggest to stick with stericson"
+		PRESS_ENTER
+		PICK_ONE "files/busybox/busybox"
+		if [[ -z "$PICKCHOICE" ]]; then
+			return 0
+		fi
+		cp -R "files/busybox/busybox/$PICKCHOICE/$ARCH/"* "$ACTIVE_PROJECT/"
 		UPDATER_SCRIPT_ADD "files/busybox/updater-scripts"
 	else
 		rm -f "$ACTIVE_PROJECT/system/xbin/busybox"
