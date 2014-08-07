@@ -228,7 +228,6 @@ DEL_PROJECT() {
 
 # Creates new project
 SET_NEWPROJECT() {
-	clear
 	PRINT_BANNER
 	echo "Before you begin, you must specify what kind of the project you want to create"
 	echo
@@ -263,7 +262,6 @@ SET_PROJECT() {
 
 # Sets old project as active one
 SET_OLDPROJECT() {
-	clear
 	PRINT_BANNER
 	local COUNT=0
 	local LASTFOUND=""
@@ -416,7 +414,6 @@ NEWPROJECT_ZIP() {
 # Sets kernel
 SET_KERNEL() {
 	if [[ -f "$ACTIVE_PROJECT/boot.img" ]] && ([[ "$(grep -qi "boot.img" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -ne 0 || "$(grep -qi "/tmp/invalid_kernel_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -eq 0 ]]); then
-		clear
 		PRINT_BANNER
 		echo "WARNING! Kernel has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
@@ -457,7 +454,6 @@ SET_KERNEL() {
 # Sets modem
 SET_MODEM() {
 	if [[ -f "$ACTIVE_PROJECT/modem.bin" ]] && ([[ "$(grep -qi "modem.bin" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -ne 0 || "$(grep -qi "/tmp/invalid_modem_path" "$ACTIVE_PROJECT/$META_INF/updater-script"; echo $?)" -eq 0 ]]); then
-		clear
 		PRINT_BANNER
 		echo "WARNING! Modem has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
@@ -991,7 +987,6 @@ DEBLOAT() {
 	else
 		local LINE=""
 		while [[ -z "$LINE" ]]; do
-			clear
 			PRINT_BANNER
 			echo "Before you begin debloating you should specify which cleaning list you want to use"
 			echo
@@ -1070,6 +1065,7 @@ ADB() {
 
 # Prints banner
 PRINT_BANNER() {
+	clear
 	echo "    _             _     _ _  ___ _       _"
 	echo "   / \   _ __ ___| |__ (_) |/ (_) |_ ___| |__   ___ _ __"
 	echo "  / _ \ | '__/ __| '_ \| | ' /| | __/ __| '_ \ / _ \ '_ \\"
@@ -1220,7 +1216,6 @@ PRINT_SWITCHES() {
 # Prints settings of the kitchen
 PAGE_SETTINGS() {
 	while :; do
-		clear
 		PRINT_BANNER
 		echo -n "Full performance: "
 		if [[ "$FULLPERFORMANCE" -eq 1 ]]; then
@@ -1316,7 +1311,6 @@ CHECK_UPDATE() {
 #                          #
 ############################
 
-clear
 PRINT_BANNER
 echo "Please wait..."
 
@@ -1372,7 +1366,6 @@ if [[ "$AUTOUPDATE" -eq 1 ]]; then
 fi
 
 while :; do
-	clear
 	PRINT_BANNER
 
 	if [[ -z "$ACTIVE_PROJECT" ]]; then
