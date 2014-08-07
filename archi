@@ -637,7 +637,8 @@ FIX_SYMLINKS() {
 				SYMLINK="$(echo "$SYMLINK" | cut -d'"' -f2)"
 				if [[ -z "$SYMLINK" ]]; then
 					continue
-				elif [[ ! -e "$ACTIVE_PROJECT$SYMLINKDIR/$SYMLINK" ]]; then
+				# We may have relative symlink such as /system/bin/dd -> toolbox, or absolute symlink such as /system/bin/busybox -> /system/xbin/buysbox
+				elif [[ ! -e "$ACTIVE_PROJECT$SYMLINKDIR/$SYMLINK" && ! -e "$ACTIVE_PROJECT$SYMLINK" ]]; then
 					echo "$SYMLINK" >> "$ACTIVE_PROJECT/updater-script-TEMP-LIST"
 					grep -v "$SYMLINK" "$ACTIVE_PROJECT/updater-script-TEMP" > "$ACTIVE_PROJECT/updater-script-TEMP2"
 					mv -f "$ACTIVE_PROJECT/updater-script-TEMP2" "$ACTIVE_PROJECT/updater-script-TEMP"
