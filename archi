@@ -447,7 +447,7 @@ SET_KERNEL() {
 		PRINT_BANNER
 		echo "WARNING! Kernel has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
-		local MODEL="$(grep -i "ro.product.device" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
+		local MODEL="$(grep -i "ro.product.device=" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
 		if [[ -z "$MODEL" ]]; then
 			echo "ERROR: Could not detect ROM model, setting of kernel failed"
 			PRESS_ENTER
@@ -487,7 +487,7 @@ SET_MODEM() {
 		PRINT_BANNER
 		echo "WARNING! Modem has been found but there's no path in the current updater-script"
 		echo "This is typical when you're converting stock image partition to ZIP-flashable ROM"
-		local MODEL="$(grep -i "ro.product.device" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
+		local MODEL="$(grep -i "ro.product.device=" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
 		if [[ -z "$MODEL" ]]; then
 			echo "ERROR: Could not detect ROM model, setting of modem failed"
 			PRESS_ENTER
@@ -1153,7 +1153,7 @@ PRINT_PROJECT_STATUS() {
 PRINT_ROM_STATUS() {
 	echo -n "Architecture: ["
 	if [[ "$ARCH" = "unknown" && -f "$ACTIVE_PROJECT/system/build.prop" ]]; then
-		ARCH="$(grep -i "ro.product.cpu.abi" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
+		ARCH="$(grep -i "ro.product.cpu.abi=" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
 		if [[ "$(echo "$ARCH" | grep -qi "arm"; echo $?)" -eq 0 ]]; then
 			ARCH="arm"
 		elif [[ "$(echo "$ARCH" | grep -qi "x86"; echo $?)" -eq 0 ]]; then
