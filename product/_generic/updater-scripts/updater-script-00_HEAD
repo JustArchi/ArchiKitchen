@@ -1,0 +1,5 @@
+# This updater-script has been automatically generated through ArchiKitchen (http://forum.xda-developers.com/showthread.php?t=2597220)
+run_program("/sbin/mount", "-t", "auto", "/system");
+delete_recursive("/system");
+show_progress(1.0, 313371337);
+package_extract_dir("system", "/system");

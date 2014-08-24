@@ -1,6 +1,13 @@
 #!/system/bin/sh
 
-# Copyright 2014 JustArchi@JustArchi.net
+#     _             _     _ ____            _     _
+#    / \   _ __ ___| |__ (_)  _ \ _ __ ___ (_) __| |
+#   / _ \ | '__/ __| '_ \| | | | | '__/ _ \| |/ _` |
+#  / ___ \| | | (__| | | | | |_| | | | (_) | | (_| |
+# /_/   \_\_|  \___|_| |_|_|____/|_|  \___/|_|\__,_|
+#
+# Copyright 2014 Łukasz "JustArchi" Domeradzki
+# Contact: JustArchi@JustArchi.net
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +20,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-#
+
 # DON'T REMOVE THIS FILE
 # ArchiDroid's Init.d contains two parts - a /system/etc/init.d/00ARCHIDROID_INITD init.d script, and this hook
 # This file is the core of ArchiDroid's Init.d
@@ -30,36 +36,66 @@
 # You can also specify "0" here for no delay and insta-call, but beware that all your init.d scripts probably will be executed twice - by kernel and this hook
 DELAY=5
 
-# This value specifies if you want to call all scripts in the background or not
-# In general it's a good idea to call them in the background, change this to "false" only if you require strict-order of your scripts
-BACKGROUND=true
-
 # Don't change values below unless you know what you're doing
-EXTRAARGS="" # If you need to call your init.d scripts with extra args, specify them here
 INITDPART="/system/etc/init.d/00ARCHIDROID_INITD" # This is the init.d part of ArchiDroid's Init.d
-CHECKPART="/dev/HAS_INIT" # This is the check-file, must be the same here and in the init.d part specified above
+CHECKPART="/data/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the init.d part specified above
 DEBUGGERD="debuggerd.real" # This is the *real* debuggerd binary which should be executed after we're done
+LOG="/data/ArchiDroidInit.log" # Log for ArchiDroid's init.d
+
+# Forward stdout and stderr to our log
+exec 1>"$LOG"
+exec 2>&1
+
+# Assume that kernel won't execute init.d before us, as we're earlier than sysinit
+rm -f "$CHECKPART" # We must make sure CHECKPART doesn't exist yet
+
+date
+echo "INFO: ArchiDroid Init.d started"
 
 # Core
-if [ ! -e $INITDPART ]; then
-	exit 1
-fi
+if [ ! -x "$INITDPART" ]; then
+	echo "ERROR: INITDPART $INITDPART was not found, make sure that it exists and is executable, halt"
+else
+	# ArchiDroid Backend call, used only on ArchiDroid ROM
+	echo "INFO: INITDPART $INITDPART found, all good"
+	if [ ! -z "$(which ARCHIDROID_RUNONCE)" ]; then
+		ARCHIDROID_RUNONCE "background" &
+	elif [ ! -z "$(which ARCHIDROID_INIT)" ]; then
+		ARCHIDROID_INIT "background" &
+	fi
 
-if [ ! -e $CHECKPART ]; then
-	sleep $DELAY
-fi
+	if [ ! -f "$CHECKPART" ]; then
+		echo "INFO: Init.d not yet executed, waiting $DELAY seconds for kernel's reaction"
+		sleep "$DELAY"
+	fi
 
-if [ ! -e $CHECKPART ]; then
-	if ($BACKGROUND); then
-		for f in $(find /system/etc/init.d -type f | sort); do
-			$f $EXTRAARGS &
-		done
+	if [ ! -f "$CHECKPART" ]; then
+		echo "INFO: After $DELAY seconds init.d is still not executed, executing all init.d scripts right now"
+		if [ ! -z "$(which sysinit)" ]; then
+			echo "INFO: Sysinit found, calling sysinit to execute init.d"
+			sysinit
+		elif [ ! -z "$(which busybox)" ]; then
+			echo "INFO: Busybox found, calling busybox run-parts"
+			busybox run-parts /system/etc/init.d
+		else
+			echo "INFO: Couldn't find any reliable method for executing init.d, using manual one"
+			find /system/etc/init.d -type f | sort | while read line; do
+				echo "INFO: Executing $(basename "$line")"
+				"$line" &
+			done
+		fi
+		if [ ! -f "$CHECKPART" ]; then
+			echo "ERROR: CHECKPART doesn't exist even after our init.d execution. This shouldn't happen, something is seriously broken here, please investigate"
+		else
+			echo "INFO: Init.d has been properly executed by ArchiDroid Init.d"
+		fi
 	else
-		for f in $(find /system/etc/init.d -type f | sort); do
-			$f $EXTRAARGS
-		done
+		echo "INFO: Init.d has been properly executed by the kernel, we don't need to do anything"
 	fi
 fi
 
-exec $DEBUGGERD $*
-exit 0
+rm -f "$CHECKPART" # We don't need you anymore
+
+echo "INFO: ArchiDroid Init.d finished"
+date
+exec "$DEBUGGERD" $@ # Yes, we must break on spaces in this case

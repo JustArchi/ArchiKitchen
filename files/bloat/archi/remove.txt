@@ -1,0 +1,31 @@
+# Bloat from branded releases
+de.pizza.lib.apk
+hrs_android_samsung_de_2014_keysource.apk
+samsung_preinstall_03_10.apk
+/system/etc/csc_*.txt
+/system/etc/hidden_apks_list_*.txt
+
+# Google apps which are downloadable from the market
+Videos.apk
+PlayGames.apk
+ChromeWithBrowser.apk
+GMS_Maps.apk
+Gmail2.apk
+YouTube.apk
+Hangouts.apk
+GoogleDrive.apk
+Drive.apk
+PlusOne.apk
+Books.apk
+Street.apk
+Music2.apk
+
+# Samsung firmware update apks
+FWUpgrade.apk
+FotaClient.apk
+
+# CSCs, I'm using multi-CSC package, so I don't need generic entries
+/system/csc
+/system/sipdb
+/system/CSCVersion.txt
+/system/SW_Configuration.xml

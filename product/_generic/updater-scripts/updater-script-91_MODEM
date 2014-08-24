@@ -1,0 +1,1 @@
+package_extract_file("modem.bin", "/tmp/invalid_modem_path");

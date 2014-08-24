@@ -1,6 +1,13 @@
 #!/system/bin/sh
 
-# Copyright 2014 JustArchi@JustArchi.net
+#     _             _     _ ____            _     _
+#    / \   _ __ ___| |__ (_)  _ \ _ __ ___ (_) __| |
+#   / _ \ | '__/ __| '_ \| | | | | '__/ _ \| |/ _` |
+#  / ___ \| | | (__| | | | | |_| | | | (_) | | (_| |
+# /_/   \_\_|  \___|_| |_|_|____/|_|  \___/|_|\__,_|
+#
+# Copyright 2014 Łukasz "JustArchi" Domeradzki
+# Contact: JustArchi@JustArchi.net
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +20,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-#
+
 # DON'T REMOVE THIS FILE
 # ArchiDroid's Init.d contains two parts - a /system/bin/debuggerd hook and this init.d script
 # This file has a very simple purpose of telling debuggerd hook that init.d has been executed already
@@ -23,8 +29,8 @@
 # Therefore, it's a very safe method for having reliable init.d call, without modyfing the kernel's ramdisk
 
 # Don't change values below unless you know what you're doing
-CHECKPART="/dev/HAS_INIT" # This is the check-file, must be the same here and in the hook part described above
+CHECKPART="/data/ARCHIDROID_INITD" # This is the check-file, must be the same here and in the hook part described above
 
 # Core
-touch $CHECKPART
+touch "$CHECKPART"
 exit 0

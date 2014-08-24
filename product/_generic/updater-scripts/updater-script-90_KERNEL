@@ -1,0 +1,1 @@
+package_extract_file("boot.img", "/tmp/invalid_kernel_path");

@@ -1,0 +1,2 @@
+symlink("/system/xbin/su", "/system/bin/su");
+symlink("/system/etc/install-recovery.sh", "/system/bin/install-recovery.sh");

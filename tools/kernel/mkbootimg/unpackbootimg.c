@@ -17,14 +17,14 @@ int read_padding(FILE* f, unsigned itemsize, int pagesize)
     byte* buf = (byte*)malloc(sizeof(byte) * pagesize);
     unsigned pagemask = pagesize - 1;
     unsigned count;
-
+    
     if((itemsize & pagemask) == 0) {
         free(buf);
         return 0;
     }
-
+    
     count = pagesize - (itemsize & pagemask);
-
+    
     fread(buf, count, 1, f);
     free(buf);
     return count;
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     char* filename = NULL;
     int pagesize = 0;
     int base = 0;
-
+    
     argc--;
     argv++;
     while(argc > 0){
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     int total_read = 0;
     FILE* f = fopen(filename, "rb");
     boot_img_hdr header;
-
+    
     //printf("Reading header...\n");
     int i;
     for (i = 0; i <= 512; i++) {
@@ -95,11 +95,12 @@ int main(int argc, char** argv)
     }
     fseek(f, i, SEEK_SET);
     //printf("Android magic found at: %d\n", i);
-
+    
     fread(&header, sizeof(header), 1, f);
     base = header.kernel_addr - 0x00008000;
     printf("BOARD_KERNEL_CMDLINE %s\n", header.cmdline);
-    printf("BOARD_KERNEL_BASE %08x\n", header.kernel_addr - 0x00008000);
+    printf("BOARD_KERNEL_BASE %08x\n", base);
+    printf("BOARD_NAME %s\n", header.name);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
     printf("BOARD_KERNEL_OFFSET %08x\n", header.kernel_addr - base);
     printf("BOARD_RAMDISK_OFFSET %08x\n", header.ramdisk_addr - base);
@@ -120,13 +121,18 @@ int main(int argc, char** argv)
     strcat(tmp, "-cmdline");
     write_string_to_file(tmp, header.cmdline);
     
+    //printf("board...\n");
+    sprintf(tmp, "%s/%s", directory, basename(filename));
+    strcat(tmp, "-board");
+    write_string_to_file(tmp, header.name);
+    
     //printf("base...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-base");
     char basetmp[200];
-    sprintf(basetmp, "%08x", header.kernel_addr - 0x00008000);
+    sprintf(basetmp, "%08x", base);
     write_string_to_file(tmp, basetmp);
-
+    
     //printf("pagesize...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-pagesize");
@@ -147,7 +153,7 @@ int main(int argc, char** argv)
     char ramdiskofftmp[200];
     sprintf(ramdiskofftmp, "%08x", header.ramdisk_addr - base);
     write_string_to_file(tmp, ramdiskofftmp);
-
+    
     if (header.second_size != 0) {
         //printf("secondoff...\n");
         sprintf(tmp, "%s/%s", directory, basename(filename));
@@ -156,18 +162,18 @@ int main(int argc, char** argv)
         sprintf(secondofftmp, "%08x", header.second_addr - base);
         write_string_to_file(tmp, secondofftmp);
     }
-
+    
     //printf("tagsoff...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-tagsoff");
     char tagsofftmp[200];
     sprintf(tagsofftmp, "%08x", header.tags_addr - base);
     write_string_to_file(tmp, tagsofftmp);
-
+    
     total_read += sizeof(header);
     //printf("total read: %d\n", total_read);
     total_read += read_padding(f, sizeof(header), pagesize);
-
+    
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-zImage");
     FILE *k = fopen(tmp, "wb");
@@ -177,10 +183,10 @@ int main(int argc, char** argv)
     total_read += header.kernel_size;
     fwrite(kernel, header.kernel_size, 1, k);
     fclose(k);
-
+    
     //printf("total read: %d\n", header.kernel_size);
     total_read += read_padding(f, header.kernel_size, pagesize);
-
+    
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-ramdisk.gz");
     FILE *r = fopen(tmp, "wb");
