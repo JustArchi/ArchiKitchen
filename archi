@@ -1318,7 +1318,7 @@ CHECK_UPDATE() {
 			PRESS_ENTER
 			return 0
 		fi
-		local REPO="archikitchen"
+		local REPO="origin"
 		local OLDHEAD="$(git rev-parse HEAD)"
 		local CURBRANCH="$(git rev-parse --abbrev-ref HEAD)"
 		if [[ "$CURBRANCH" != "$GITHUBBRANCH" ]]; then
@@ -1327,7 +1327,7 @@ CHECK_UPDATE() {
 			return 0
 		fi
 		if [[ "$(git remote | grep -qi "$REPO"; echo $?)" -ne 0 ]]; then
-			git remote add "$REPO" "$GITHUBLINK"
+			git remote add -t "$GITHUBBRANCH" -m "$GITHUBBRANCH" "$REPO" "$GITHUBLINK"
 		fi
 		echo "Fetching current version..."
 		git fetch -q "$REPO" "$GITHUBBRANCH"
