@@ -162,6 +162,7 @@ BLACKLIST_REMOVE() {
 			case "$TARGETS" in
 				/*) ;;
 				*.apk) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/app/$TARGETS.apk /system/app/$TARGETS.odex /system/priv-app/$TARGETS.apk /system/priv-app/$TARGETS.odex" ;;
+				*.jar) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/framework/$TARGETS.jar /system/framework/$TARGETS.odex" ;;
 				*.so) TARGETS="/system/lib/$TARGETS" ;;
 			esac
 			for TARGET in $TARGETS; do
