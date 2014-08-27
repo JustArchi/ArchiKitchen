@@ -33,26 +33,39 @@ You may also use both clean.txt and remove.txt. For example I'm using such combi
 ArchiKitchen currently supports:
 1. Empty lines []
 2. Commented lines [# This is comment] [#This as well]
-3. Absolute paths [/system/media/audio/awesome.ogg] [/system/app/Myapp.apk]
-4. APKs [Myapp.apk] [Chrome.apk]
-5. Libs [mylib.so] [libchromeview.so]
-6. Wildcards [Google*.apk] [/system/media/*.ogg]
+3. Apks [Myapp.apk] [Chrome.apk]
+4. Libs [mylib.so] [libchromeview.so]
+5. Jars [kies.jar] [framework2.jar]
+6. Absolute paths [/system/media/audio/awesome.ogg] [/system/csc]
+7. Wildcards [Google*.apk] [/system/media/*.ogg]
 
 RULE OF THUMB: One entry per line
 
+Please note that:
+- Apks and Jars also include cleaning of proper .odex files connected with them. If you specify absolute path, odex files won't be cleaned, unless you use a wildcard like /system/app/Chrome*
+- It's better to use i.e. Chrome.apk instead of /system/app/Chrome.apk, because Chrome.apk entry apart from cleaning odex will also clean both /app and /priv-app locations
+- In general, try to not use absolute paths if you can achieve the same using built-in rules. Unless you REALLY want to delete only one specific file/folder and not anything else
+- Wildcards apply to all rules above, so you can specify i.e. libDio*.so instead of /system/lib/libDio*.so (both will work)
+- Take care with wildcards and absolute paths. Try to use bare-minimum wildcards like /system/etc/hidden_apks_list_*.txt instead of /system/etc/hidden*
+
 For example, a remove.txt with following content:
 ---------------------------------
-# My awesome cleaning list v 1.0
+# My awesome cleaning list v 1.1
 # Here we start
 
+/system/csc
 /system/audio/file.ogg
 Chrome.apk
 libchromeview.so
+kies.jar
 ---------------------------------
 Will result in removing:
+/system/csc (directory)
 /system/audio/file.ogg
 /system/app/Chrome.apk
 /system/app/Chrome.odex
 /system/priv-app/Chrome.apk
 /system/priv-app/Chrome.odex
 /system/lib/libchromeview.so
+/system/framework/kies.jar
+/system/framework/kies.odex
