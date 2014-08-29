@@ -637,7 +637,11 @@ FIX_SYMLINKS() {
 			while read SYMLINK; do
 				SYMLINKDIR="$(dirname "$(echo "$SYMLINK" | cut -d'"' -f4)")"
 				SYMLINK="$(echo "$SYMLINK" | cut -d'"' -f2)"
+				# If symlink is empty, continue
 				if [[ -z "$SYMLINK" ]]; then
+					continue
+				# If symlink is absolute symlink and doesn't start with /system, continue, we can't track directories like /firmware or /data
+				elif [[ "$SYMLINK" == /* && "$SYMLINK" != /system* ]]; then
 					continue
 				# We may have relative symlink such as /system/bin/dd -> toolbox, or absolute symlink such as /system/bin/busybox -> /system/xbin/buysbox
 				elif [[ ! -e "$ACTIVE_PROJECT$SYMLINKDIR/$SYMLINK" && ! -e "$ACTIVE_PROJECT$SYMLINK" ]]; then
