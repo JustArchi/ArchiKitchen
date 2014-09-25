@@ -1,8 +1,3 @@
-de.pizza.lib.apk
-hrs_android_samsung_de_2014_keysource.apk
-samsung_preinstall_03_10.apk
-/system/etc/csc_*.txt
-/system/etc/hidden_apks_list_*.txt
 Videos.apk
 PlayGames.apk
 YouTube.apk
