@@ -10,9 +10,6 @@ Books.apk
 Street.apk
 FWUpgrade.apk
 FotaClient.apk
-/system/sipdb
-/system/CSCVersion.txt
-/system/SW_Configuration.xml
 /system/lost+found
 Magazines.apk
 Flipboard.apk
