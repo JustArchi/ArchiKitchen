@@ -118,4 +118,4 @@ Velvet.apk
 GoogleFeedback.apk
 Kies.apk
 HealthService.apk
-SHealth3.apk
+SHealth*.apk
