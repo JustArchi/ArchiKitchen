@@ -990,7 +990,7 @@ ROOT() {
 		fi
 		mkdir -p "$ACTIVE_PROJECT/system/xbin"
 		cp -R files/root/system/* "$ACTIVE_PROJECT/system/"
-		cp -R "files/root/$ARCH/"* "$ACTIVE_PROJECT/"
+		cp -R "files/root/ARCH/$ARCH/"* "$ACTIVE_PROJECT/"
 		cp "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/xbin/daemonsu"
 		mkdir -p "$ACTIVE_PROJECT/system/bin/.ext"
 		cp "$ACTIVE_PROJECT/system/xbin/su" "$ACTIVE_PROJECT/system/bin/.ext/.su"
@@ -1055,18 +1055,6 @@ DEBLOAT() {
 	PRESS_ENTER
 }
 
-# Adds or removes custom bootanimation
-BOOTANIMATION() {
-	if [[ ! -f "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]]; then
-		mv -f "$ACTIVE_PROJECT/system/bin/bootanimation" "$ACTIVE_PROJECT/system/bin/bootanimation.orig"
-		cp -R "files/bootanimation/$ARCH/"* "$ACTIVE_PROJECT/"
-		cp -R files/bootanimation/common/* "$ACTIVE_PROJECT/"
-	else
-		mv -f "$ACTIVE_PROJECT/system/bin/bootanimation.orig" "$ACTIVE_PROJECT/system/bin/bootanimation"
-		rm -f "$ACTIVE_PROJECT/system/media/bootanimation.zip"
-	fi
-}
-
 # Adds or removes busybox
 BUSYBOX() {
 	if [[ ! -f "$ACTIVE_PROJECT/system/xbin/busybox" ]]; then
@@ -1086,8 +1074,11 @@ BUSYBOX() {
 		if [[ -z "$PICKCHOICE" ]]; then
 			return 0
 		fi
-		cp -R "files/busybox/busybox/$PICKCHOICE/$ARCH/"* "$ACTIVE_PROJECT/"
+		cp -R "files/busybox/busybox/$PICKCHOICE/ARCH/$ARCH/"* "$ACTIVE_PROJECT/"
 		ln -s "/system/xbin/busybox" "$ACTIVE_PROJECT/system/bin/busybox"
+		if [[ -d "files/busybox/busybox/$PICKCHOICE/system" ]]; then
+			cp -R "files/busybox/busybox/$PICKCHOICE/system/"* "$ACTIVE_PROJECT/system/"
+		fi
 		UPDATER_SCRIPT_ADD "files/busybox/updater-scripts"
 	else
 		rm -f "$ACTIVE_PROJECT/system/bin/busybox" "$ACTIVE_PROJECT/system/xbin/busybox"
@@ -1160,13 +1151,6 @@ PRINT_ROM_STATUS() {
 	echo -n "Architecture: ["
 	if [[ "$ARCH" = "unknown" && -f "$ACTIVE_PROJECT/system/build.prop" ]]; then
 		ARCH="$(grep -i "ro.product.cpu.abi=" "$ACTIVE_PROJECT/system/build.prop" | head -n 1 | cut -d'=' -f2)"
-		if [[ "$(echo "$ARCH" | grep -qi "arm"; echo $?)" -eq 0 ]]; then
-			ARCH="arm"
-		elif [[ "$(echo "$ARCH" | grep -qi "x86"; echo $?)" -eq 0 ]]; then
-			ARCH="x86"
-		else
-			ARCH="unknown"
-		fi
 	fi
 	echo "$ARCH]"
 	echo
@@ -1213,12 +1197,6 @@ PRINT_ROM_STATUS() {
 	else
 		echo "[NO]"
 	fi
-	echo -n "Custom Bootanimation? "
-	if [[ ! -f "$ACTIVE_PROJECT/system/media/bootanimation.zip" ]]; then
-		echo "[NO]"
-	else
-		echo "[YES]"
-	fi
 	if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
 		PRINT_LINE
 		echo -n "ADB? "
@@ -1243,7 +1221,6 @@ PRINT_SWITCHES() {
 	echo "bloat - Bloat/Debloat ROM"
 	echo "r     - Enable/Disable Root"
 	echo "b     - Enable/Disable Busybox"
-	echo "ba    - Enable/Disable Custom Bootanimation"
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
 	echo "d     - Deodex Everything"
 	echo "z     - Zipalign Everything"
@@ -1437,7 +1414,6 @@ while :; do
 		bloat|BLOAT) DEBLOAT ;;
 		r|R) ROOT ;;
 		b|B) BUSYBOX ;;
-		ba|BA) BOOTANIMATION ;;
 
 		d|D) DEODEX ;;
 		z|Z) ZIPALIGN ;;
