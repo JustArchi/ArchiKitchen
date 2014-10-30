@@ -798,9 +798,9 @@ KERNEL_ABORT() {
 # Adds kernel's Init.d
 INITD() {
 	KERNEL_EXTRACT
-	if [[ -f kernel/ramdisk/init.rc ]]; then
-		sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' kernel/ramdisk/init.rc
-		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' kernel/ramdisk/init.rc
+	if [[ -f "$ACTIVE_PROJECT/kernel/ramdisk/init.rc" ]]; then
+		sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"
+		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"
 		KERNEL_REPACK
 		cp -R files/initd/system/* "$ACTIVE_PROJECT/system/"
 		UPDATER_SCRIPT_ADD "files/initd/updater-scripts"
@@ -1230,7 +1230,7 @@ PRINT_SWITCHES() {
 		echo "kr    - Repack kernel (apply all ramdisk changes)"
 		echo "ka    - Abort repacking (abort all ramdisk changes)"
 		echo
-		echo "i     - Add Init.d Support (Bugged?) (hardware kernel hook)"
+		echo "i     - Add Init.d Support (hardware kernel hook)"
 		echo "adb   - Enable/Disable insecure ADB"
 	elif [[ -f "$ACTIVE_PROJECT/boot.img" ]]; then
 		echo "ku    - Unpack kernel (this enables more options!)"
