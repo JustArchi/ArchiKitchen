@@ -888,8 +888,8 @@ DEODEX_FILE() {
 	fi
 	FILE="$FILE.$FILEEXTENSION"
 	echo "Deodexing $FILE..."
-	# If file is APK and already contains classes.dex, we should delete proper odex file only
-	if [[ "$FILEEXTENSION" = "apk" && "$(unzip -l "$FILEDIR/$FILE" | grep -q "classes.dex"; echo $?)" -eq 0 ]]; then
+	# If file already contains classes.dex, we should delete proper odex file only
+	if [[ "$(unzip -l "$FILEDIR/$FILE" | grep -q "classes.dex"; echo $?)" -eq 0 ]]; then
 		echo "INFO: $FILE contains classes.dex already, removing $ODEX"
 		rm -f "$FILEDIR/$ODEX"
 		return 0
