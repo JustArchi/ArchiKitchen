@@ -39,6 +39,8 @@ CUSER="$(whoami)"
 
 ALIGN=4
 FULLPERFORMANCE=1
+CBIN="" # Ramdisk compression method
+DBIN="" # Ramdisk decompression method
 
 META_INF="META-INF/com/google/android"
 UPDATER_SCRIPT_HEAD="updater-script-00_HEAD" # Unused
@@ -727,7 +729,7 @@ FIX_SYMLINKS() {
 # Extracts the kernel
 KERNEL_EXTRACT() {
 	if [[ ! -d "$ACTIVE_PROJECT/kernel" ]]; then
-		if [[ ! -x $TEMPDIR/mkbootimg ]]; then
+		if [[ ! -x "$TEMPDIR/mkbootimg" ]]; then
 			cd tools/kernel/mkbootimg
 			make
 			if [[ ! -x mkbootimg || ! -x unpackbootimg ]]; then
@@ -735,24 +737,46 @@ KERNEL_EXTRACT() {
 				PRESS_ENTER
 				return 1
 			fi
-			cp mkbootimg ../../../$TEMPDIR/mkbootimg
-			cp unpackbootimg ../../../$TEMPDIR/unpackbootimg
+			mv mkbootimg "../../../$TEMPDIR/mkbootimg"
+			mv unpackbootimg "../../../$TEMPDIR/unpackbootimg"
 			make clean
 			cd ../../..
 		fi
 		if [[ -f "$ACTIVE_PROJECT/boot.img" ]]; then
-			rm -rf "$ACTIVE_PROJECT/kernel"
 			mkdir -p "$ACTIVE_PROJECT/kernel"
-			$TEMPDIR/unpackbootimg -i "$ACTIVE_PROJECT/boot.img" -o "$ACTIVE_PROJECT/kernel"
+			"$TEMPDIR/unpackbootimg" -i "$ACTIVE_PROJECT/boot.img" -o "$ACTIVE_PROJECT/kernel"
 			mkdir -p "$ACTIVE_PROJECT/kernel/ramdisk"
 			if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" ]]; then
+				# Detect compression algorithm
+				if [[ "$(gunzip -t "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" >/dev/null 2>&1; echo $?)" -eq 0 ]]; then
+					# GZIP
+					CBIN="gzip -9"
+					DBIN="gunzip -c"
+				elif [[ "$(lzop -t "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" >/dev/null 2>&1; echo $?)" -eq 0 ]]; then
+					# LZO
+					CBIN="lzop -9"
+					DBIN="lzop -dc"
+				elif [[ "$(xz -t "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" >/dev/null 2>&1; echo $?)" -eq 0 ]]; then
+					# XZ
+					CBIN="xz -9"
+					DBIN="xz -dc"
+				elif [[ "$(lzma -t "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" >/dev/null 2>&1; echo $?)" -eq 0 ]]; then
+					# LZMA
+					CBIN="lzma -9"
+					DBIN="lzma -dc"
+				else
+					echo "ERROR: Could not detect any known format of the ramdisk!"
+					KERNEL_ABORT
+					PRESS_ENTER
+					return 1
+				fi
+				echo "$CBIN" > "$ACTIVE_PROJECT/kernel/ArchiKitchen-compression-method" # Store for future use, if user decides to shut down the kitchen
 				cd "$ACTIVE_PROJECT/kernel/ramdisk"
-				#TODO: Handle non-gz ramdisk as well, but not now...
-				gunzip -c ../boot.img-ramdisk.gz | cpio -i
+				$DBIN ../boot.img-ramdisk.gz | cpio -i
 				cd ../../..
 			fi
 		else
-			echo "No kernel found!"
+			echo "ERROR: No kernel could be found!"
 			PRESS_ENTER
 			return 1
 		fi
@@ -764,13 +788,21 @@ KERNEL_REPACK() {
 	local EXTRA=()
 	if [[ -d "$ACTIVE_PROJECT/kernel" ]]; then
 		if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
+			if [[ -z "$CBIN" && -f "$ACTIVE_PROJECT/kernel/ArchiKitchen-compression-method" ]]; then
+				CBIN="$(cat "$ACTIVE_PROJECT/kernel/ArchiKitchen-compression-method")" # Load compression method if we need it and have it stored
+			elif [[ -z "$CBIN" ]]; then
+				echo "ERROR: Can't decide which compression method to use!"
+				KERNEL_ABORT
+				PRESS_ENTER
+				return 1
+			fi
 			cd "$ACTIVE_PROJECT/kernel/ramdisk"
-			find . | cpio -o -H newc | gzip > ../boot.img-ramdisk-NEW.gz
+			find . | cpio -o -H newc | $CBIN > ../boot.img-ramdisk-NEW.gz
 			cd ../../..
 			if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-dtb" ]]; then
-				EXTRA+=(--dt $ACTIVE_PROJECT/kernel/boot.img-dtb)
+				EXTRA+=(--dt "$ACTIVE_PROJECT/kernel/boot.img-dtb")
 			fi
-			$TEMPDIR/mkbootimg --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
+			"$TEMPDIR/mkbootimg" --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
 			--ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.gz" \
 			--base "$(cat "$ACTIVE_PROJECT/kernel/boot.img-base")" \
 			--cmdline "$(cat "$ACTIVE_PROJECT/kernel/boot.img-cmdline")" \
@@ -780,12 +812,22 @@ KERNEL_REPACK() {
 			--tags_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-tagsoff")" \
 			"${EXTRA[@]}" \
 			-o "$ACTIVE_PROJECT/temp.img"
-			mv -f "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
+			if [[ $? -eq 0 ]]; then
+				mv "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
+				KERNEL_ABORT # This is actually used for cleaning only
+				return 0
+			else
+				echo "ERROR: Something went wrong!"
+				KERNEL_ABORT
+				PRESS_ENTER
+				return 1
+			fi
 		else
-			echo "Error, no ramdisk found?!"
+			echo "ERROR: Could not find the ramdisk!"
+			KERNEL_ABORT
 			PRESS_ENTER
+			return 1
 		fi
-		KERNEL_ABORT
 	fi
 }
 
