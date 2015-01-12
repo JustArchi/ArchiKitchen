@@ -1,3 +1,5 @@
+symlink("app_process32", "/system/bin/app_process");
+symlink("dalvikvm32", "/system/bin/dalvikvm");
 symlink("debuggerd", "/system/bin/csview");
 symlink("dumpstate", "/system/bin/dumpcrash");
 symlink("libGLESv2.so", "/system/lib/libGLESv3.so");
@@ -5,6 +7,8 @@ symlink("logcat", "/system/bin/lolcat");
 symlink("mksh", "/system/bin/sh");
 symlink("Roboto-Bold.ttf", "/system/fonts/DroidSans-Bold.ttf");
 symlink("Roboto-Regular.ttf", "/system/fonts/DroidSans.ttf");
+symlink("sh", "/system/bin/mksh");
+
 symlink("toolbox", "/system/bin/cat");
 symlink("toolbox", "/system/bin/chcon");
 symlink("toolbox", "/system/bin/chmod");
@@ -74,4 +78,18 @@ symlink("toolbox", "/system/bin/uptime");
 symlink("toolbox", "/system/bin/vmstat");
 symlink("toolbox", "/system/bin/watchprops");
 symlink("toolbox", "/system/bin/wipe");
+
 symlink("wiperiface_v02", "/system/bin/wiperiface");
+
+symlink("/system/lib/libnfc_nci_jni.so", "/system/app/NfcNci/lib/arm/libnfc_nci_jni.so");
+symlink("/system/lib/libprintspooler_jni.so", "/system/app/SPrintSpooler/lib/arm/libprintspooler_jni.so");
+symlink("/system/lib/libsbrowser.so", "/system/app/SBrowser/lib/arm/libsbrowser.so");
+symlink("/system/lib/libssecv8.so", "/system/app/SBrowser/lib/arm/libssecv8.so");
+symlink("/system/lib/libstlport_sh_521.so", "/system/app/SBrowser/lib/arm/libstlport_sh_521.so");
+symlink("/system/lib/libwbs.so", "/system/app/SBrowser/lib/arm/libwbs.so");
+symlink("/system/lib/libbluetooth_jni.so", "/system/app/Bluetooth/lib/arm/libbluetooth_jni.so");
+symlink("/system/lib/libcommonpawrapper.so", "/system/app/RootPA/lib/arm/libcommonpawrapper.so");
+symlink("/system/lib/libjni_emailencryption.so", "/system/app/SecEmail_K/lib/arm/libjni_emailencryption.so");
+symlink("/system/lib/libjni_pacprocessor.so", "/system/app/PacProcessor/lib/arm/libjni_pacprocessor.so");
+symlink("/system/lib/libloadStylusCore.so", "/system/app/SamsungIME/lib/arm/libloadStylusCore.so");
+symlink("/system/lib/libdefcontainer_jni.so", "/system/priv-app/DefaultContainerService/lib/arm/libdefcontainer_jni.so");
