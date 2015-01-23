@@ -1421,7 +1421,7 @@ cd "$(dirname "$0")"
 if [[ "$(ln -s archi archi.ln.test >/dev/null 2>&1; echo $?)" -ne 0 ]]; then
 	echo "ERROR: Current kitchen location doesn't support symbolic links!"
 	echo "Symbolic links cannot be used on Windows-based filesystems, such as FAT, NTFS, or VirtualBox shared folder mount on one of the previous"
-	echo" You must use ArchiKitchen in native Linux location, such as /root, /home/username, /tmp, or any other mountpoint, which supports symbolic links"
+	echo "You must use ArchiKitchen in native Linux location, such as /root, /home/username, /tmp, or any other mountpoint, which supports symbolic links"
 	exit 1
 else
 	rm -f archi.ln.test
