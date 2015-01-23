@@ -1418,7 +1418,7 @@ ZIPALIGN="./tools/zipalign/$HOSTARCH/zipalign"
 cd "$(dirname "$0")"
 
 # Check if symlink support is present
-if [[ "$(ln -s archi archi.ln.test)" -ne 0 ]]; then
+if [[ "$(ln -s archi archi.ln.test >/dev/null 2>&1; echo $?)" -ne 0 ]]; then
 	echo "ERROR: Current kitchen location doesn't support symbolic links!"
 	echo "Symbolic links cannot be used on Windows-based filesystems, such as FAT, NTFS, or VirtualBox shared folder mount on one of the previous"
 	echo" You must use ArchiKitchen in native Linux location, such as /root, /home/username, /tmp, or any other mountpoint, which supports symbolic links"
