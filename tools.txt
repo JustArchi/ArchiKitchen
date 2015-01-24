@@ -5,4 +5,4 @@ Also, for a reference where to search for updates
 Busybox             | https://play.google.com/store/apps/details?id=stericson.busybox | 5 January 2015
 Kernel repack tools | https://github.com/osm0sis/mkbootimg                            | 03905f7e5080c175d711726988ac81a3179e3923
 SuperSU             | http://download.chainfire.eu/supersu                            | 2.45
-Zipalign            | http://developer.android.com/sdk/index.html                     | 5 July
+Zipalign            | https://developer.android.com/tools/revisions/build-tools.html  | November 2014
