@@ -730,17 +730,17 @@ FIX_SYMLINKS() {
 KERNEL_EXTRACT() {
 	if [[ ! -d "$ACTIVE_PROJECT/kernel" ]]; then
 		if [[ ! -x "$TEMPDIR/mkbootimg" ]]; then
-			cd tools/kernel/mkbootimg
+			cd tools/mkbootimg
 			make
 			if [[ ! -x mkbootimg || ! -x unpackbootimg ]]; then
 				echo "ERROR! Something went wrong with compilation of mkbootimg!"
 				PRESS_ENTER
 				return 1
 			fi
-			mv mkbootimg "../../../$TEMPDIR/mkbootimg"
-			mv unpackbootimg "../../../$TEMPDIR/unpackbootimg"
+			mv mkbootimg "../../$TEMPDIR/mkbootimg"
+			mv unpackbootimg "../../$TEMPDIR/unpackbootimg"
 			make clean
-			cd ../../..
+			cd ../..
 		fi
 		if [[ -f "$ACTIVE_PROJECT/boot.img" ]]; then
 			mkdir -p "$ACTIVE_PROJECT/kernel"
