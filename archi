@@ -835,7 +835,7 @@ KERNEL_REPACK() {
 					--ramdisk_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-ramdiskoff")" \
 					--tags_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-tagsoff")" \
 					"${EXTRA[@]}" \
-					-o "$ACTIVE_PROJECT/temp.img" >/dev/null 2>&1
+					-o "$ACTIVE_PROJECT/kernel/temp.img" >/dev/null 2>&1
 					echo $?
 				)"
 			else
@@ -850,7 +850,7 @@ KERNEL_REPACK() {
 				cd ../..
 			fi
 			if [[ "$SUCCESS" -eq 0 ]]; then
-				mv "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
+				mv "$ACTIVE_PROJECT/kernel/temp.img" "$ACTIVE_PROJECT/boot.img"
 				KERNEL_ABORT # This is actually used for cleaning only
 				return 0
 			else
