@@ -745,6 +745,7 @@ KERNEL_EXTRACT() {
 		fi
 
 		if [[ ! -L "$TOOLSDIR/mtk-tools/mkbootimg" ]]; then
+			rm -f "$TOOLSDIR/mtk-tools/mkbootimg"
 			ln -s "../../$TEMPDIR/mkbootimg" "$TOOLSDIR/mtk-tools/mkbootimg"
 		fi
 
