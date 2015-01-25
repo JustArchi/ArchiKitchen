@@ -26,6 +26,7 @@ set +e
 # Initial variables
 VERSION="1.0" # Unused
 TEMPDIR="TEMP"
+TOOLSDIR="tools"
 TOOLS=(which whoami basename dirname gcc java perl sed cut wget od wc cpio zip unzip tar)
 XDALINK="http://forum.xda-developers.com/showthread.php?t=2597220"
 GITHUBLINK="https://github.com/JustArchi/ArchiKitchen.git"
@@ -227,7 +228,7 @@ TRY_MOUNT() {
 		echo "Yes it is!"
 		if [[ ! -x "$TEMPDIR/simg2img" ]]; then
 			echo "Compiling simg2img..."
-			gcc -O2 "tools/simg2img/sparse_crc32.c" "tools/simg2img/simg2img.c" -o "$TEMPDIR/simg2img"
+			gcc -O2 "$TOOLSDIR/simg2img/sparse_crc32.c" "$TOOLSDIR/simg2img/simg2img.c" -o "$TEMPDIR/simg2img"
 		fi
 		echo "Converting sparse image to image..."
 		./$TEMPDIR/simg2img "$1" "$1".simg2img
@@ -730,7 +731,7 @@ FIX_SYMLINKS() {
 KERNEL_EXTRACT() {
 	if [[ ! -d "$ACTIVE_PROJECT/kernel" ]]; then
 		if [[ ! -x "$TEMPDIR/mkbootimg" ]]; then
-			cd tools/mkbootimg
+			cd "$TOOLSDIR/mkbootimg"
 			make
 			if [[ ! -x mkbootimg || ! -x unpackbootimg ]]; then
 				echo "ERROR! Something went wrong with compilation of mkbootimg!"
@@ -742,10 +743,15 @@ KERNEL_EXTRACT() {
 			make clean
 			cd ../..
 		fi
+
+		if [[ ! -L "$TOOLSDIR/mtk-tools/mkbootimg" ]]; then
+			ln -s "../../$TEMPDIR/mkbootimg" "$TOOLSDIR/mtk-tools/mkbootimg"
+		fi
+
 		if [[ -f "$ACTIVE_PROJECT/boot.img" ]]; then
 			mkdir -p "$ACTIVE_PROJECT/kernel"
 			"$TEMPDIR/unpackbootimg" -i "$ACTIVE_PROJECT/boot.img" -o "$ACTIVE_PROJECT/kernel"
-			mkdir -p "$ACTIVE_PROJECT/kernel/ramdisk"
+			mkdir -p "$ACTIVE_PROJECT/kernel/boot.img-ramdisk"
 			if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" ]]; then
 				# Detect compression algorithm
 				if [[ "$(gunzip -t "$ACTIVE_PROJECT/kernel/boot.img-ramdisk.gz" >/dev/null 2>&1; echo $?)" -eq 0 ]]; then
@@ -765,15 +771,30 @@ KERNEL_EXTRACT() {
 					CBIN="lzma -9"
 					DBIN="lzma -dc"
 				else
-					echo "ERROR: Could not detect any known format of the ramdisk!"
+					echo "WARNING: Could not detect any known format of the ramdisk!"
 					KERNEL_ABORT
-					PRESS_ENTER
-					return 1
+					echo "INFO: Trying to unpack the kernel as MTK..."
+					mkdir -p "$ACTIVE_PROJECT/kernel"
+					cd "$ACTIVE_PROJECT/kernel"
+					local MTK_PROBE="$(../../$TOOLSDIR/mtk-$TOOLSDIR/unpack-MTK.pl "../boot.img" >/dev/null 2>&1; echo $?)"
+					cd ../..
+					if [[ "$MTK_PROBE" -eq 0 ]]; then
+						echo "INFO: Success!"
+						CBIN="mtk"
+						DBIN="mtk"
+					else
+						echo "ERROR: Could not find any valid method to unpack this kernel. Either it's not valid, or ArchiKitchen can't find out how to deal with it"
+						KERNEL_ABORT
+						PRESS_ENTER
+						return 1
+					fi
 				fi
 				echo "$CBIN" > "$ACTIVE_PROJECT/kernel/ArchiKitchen-compression-method" # Store for future use, if user decides to shut down the kitchen
-				cd "$ACTIVE_PROJECT/kernel/ramdisk"
-				$DBIN ../boot.img-ramdisk.gz | cpio -i
-				cd ../../..
+				if [[ "$CBIN" != "mtk" && "$DBIN" != "mtk" ]]; then
+					cd "$ACTIVE_PROJECT/kernel/boot.img-ramdisk"
+					$DBIN ../boot.img-ramdisk.gz | cpio -i
+					cd ../../..
+				fi
 			fi
 		else
 			echo "ERROR: No kernel could be found!"
@@ -787,7 +808,7 @@ KERNEL_EXTRACT() {
 KERNEL_REPACK() {
 	local EXTRA=()
 	if [[ -d "$ACTIVE_PROJECT/kernel" ]]; then
-		if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
+		if [[ -d "$ACTIVE_PROJECT/kernel/boot.img-ramdisk" ]]; then
 			if [[ -z "$CBIN" && -f "$ACTIVE_PROJECT/kernel/ArchiKitchen-compression-method" ]]; then
 				CBIN="$(cat "$ACTIVE_PROJECT/kernel/ArchiKitchen-compression-method")" # Load compression method if we need it and have it stored
 			elif [[ -z "$CBIN" ]]; then
@@ -796,28 +817,44 @@ KERNEL_REPACK() {
 				PRESS_ENTER
 				return 1
 			fi
-			cd "$ACTIVE_PROJECT/kernel/ramdisk"
-			find . | cpio -o -H newc | $CBIN > ../boot.img-ramdisk-NEW.gz
-			cd ../../..
-			if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-dtb" ]]; then
-				EXTRA+=(--dt "$ACTIVE_PROJECT/kernel/boot.img-dtb")
+			local SUCCESS=1
+			if [[ "$CBIN" != "mtk" ]]; then
+				cd "$ACTIVE_PROJECT/kernel/boot.img-ramdisk"
+				find . | cpio -o -H newc | $CBIN > ../boot.img-ramdisk-NEW.gz
+				cd ../../..
+				if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-dtb" ]]; then
+					EXTRA+=(--dt "$ACTIVE_PROJECT/kernel/boot.img-dtb")
+				fi
+				SUCCESS="$(
+					"$TEMPDIR/mkbootimg" --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
+					--ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.gz" \
+					--base "$(cat "$ACTIVE_PROJECT/kernel/boot.img-base")" \
+					--cmdline "$(cat "$ACTIVE_PROJECT/kernel/boot.img-cmdline")" \
+					--kernel_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-kerneloff")" \
+					--pagesize "$(cat "$ACTIVE_PROJECT/kernel/boot.img-pagesize")" \
+					--ramdisk_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-ramdiskoff")" \
+					--tags_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-tagsoff")" \
+					"${EXTRA[@]}" \
+					-o "$ACTIVE_PROJECT/temp.img" >/dev/null 2>&1
+					echo $?
+				)"
+			else
+				cd "$ACTIVE_PROJECT/kernel"
+				SUCCESS="$(
+					../../tools/mtk-tools/repack-MTK.pl -boot \
+					boot.img-kernel.img \
+					boot.img-ramdisk \
+					temp.img >/dev/null 2>&1
+					echo $?
+				)"
+				cd ../..
 			fi
-			"$TEMPDIR/mkbootimg" --kernel "$ACTIVE_PROJECT/kernel/boot.img-zImage" \
-			--ramdisk "$ACTIVE_PROJECT/kernel/boot.img-ramdisk-NEW.gz" \
-			--base "$(cat "$ACTIVE_PROJECT/kernel/boot.img-base")" \
-			--cmdline "$(cat "$ACTIVE_PROJECT/kernel/boot.img-cmdline")" \
-			--kernel_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-kerneloff")" \
-			--pagesize "$(cat "$ACTIVE_PROJECT/kernel/boot.img-pagesize")" \
-			--ramdisk_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-ramdiskoff")" \
-			--tags_offset "$(cat "$ACTIVE_PROJECT/kernel/boot.img-tagsoff")" \
-			"${EXTRA[@]}" \
-			-o "$ACTIVE_PROJECT/temp.img"
-			if [[ $? -eq 0 ]]; then
+			if [[ "$SUCCESS" -eq 0 ]]; then
 				mv "$ACTIVE_PROJECT/temp.img" "$ACTIVE_PROJECT/boot.img"
 				KERNEL_ABORT # This is actually used for cleaning only
 				return 0
 			else
-				echo "ERROR: Something went wrong!"
+				echo "ERROR: Something went wrong! Error code: $SUCCESS"
 				KERNEL_ABORT
 				PRESS_ENTER
 				return 1
@@ -839,9 +876,9 @@ KERNEL_ABORT() {
 
 # Adds kernel's Init.d
 INITD() {
-	if [[ -f "$ACTIVE_PROJECT/kernel/ramdisk/init.rc" ]]; then
-		sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"
-		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"
+	if [[ -f "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/init.rc" ]]; then
+		sed -i -e '0,/class_start /s//start sysinit\n\n    class_start /' "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/init.rc"
+		sed -i -e 's/service media /service sysinit \/system\/bin\/logwrapper \/system\/xbin\/busybox run-parts \/system\/etc\/init.d\n    disabled\n    oneshot\n\nservice media /' "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/init.rc"
 		cp -R files/initd/system/* "$ACTIVE_PROJECT/system/"
 		UPDATER_SCRIPT_ADD "files/initd/updater-scripts"
 	else
@@ -939,7 +976,7 @@ DEODEX_FILE() {
 	echo "Disassembling $ODEX..."
 	rm -rf "$TEMPDIR/$ODEX"
 	mkdir -p "$TEMPDIR/$ODEX"
-	java -jar tools/smali/baksmali.jar -a "$API" -d "$ACTIVE_PROJECT/system/framework" -x "$FILEDIR/$ODEX" -o "$TEMPDIR/$ODEX/DECOMPILED"
+	java -jar "$TOOLSDIR/smali/baksmali.jar" -a "$API" -d "$ACTIVE_PROJECT/system/framework" -x "$FILEDIR/$ODEX" -o "$TEMPDIR/$ODEX/DECOMPILED"
 	if [[ $? -ne 0 || ! -d "$TEMPDIR/$ODEX/DECOMPILED" ]]; then
 		echo "ERROR: Could not deodex $ODEX, aborting!"
 		rm -rf "$TEMPDIR/$ODEX"
@@ -947,7 +984,7 @@ DEODEX_FILE() {
 		return 1
 	fi
 	echo "Assembling disassembled $ODEX into classes.dex..."
-	java -jar tools/smali/smali.jar -a "$API" -o "$TEMPDIR/$ODEX/classes.dex" "$TEMPDIR/$ODEX/DECOMPILED"
+	java -jar "$TOOLSDIR/smali/smali.jar" -a "$API" -o "$TEMPDIR/$ODEX/classes.dex" "$TEMPDIR/$ODEX/DECOMPILED"
 	if [[ $? -ne 0 || ! -f "$TEMPDIR/$ODEX/classes.dex" ]]; then
 		echo "ERROR: Could not assemble disassembled $ODEX, aborting!"
 		rm -rf "$TEMPDIR/$ODEX"
@@ -1137,13 +1174,13 @@ REMOVE_KNOX() {
 
 # Adds or removes insecure ADB
 ADB() {
-	if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
-		if [[ "$(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?)" -eq 0 ]]; then
-			SED_CHANGE_WORD "ro.adb.secure=1" "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
-			SED_CHANGE_WORD "ro.secure=1" "ro.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
+	if [[ -d "$ACTIVE_PROJECT/kernel/boot.img-ramdisk" ]]; then
+		if [[ "$(grep -qi "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/default.prop"; echo $?)" -eq 0 ]]; then
+			SED_CHANGE_WORD "ro.adb.secure=1" "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/default.prop"
+			SED_CHANGE_WORD "ro.secure=1" "ro.secure=0" "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/default.prop"
 		else
-			SED_CHANGE_WORD "ro.adb.secure=0" "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
-			SED_CHANGE_WORD "ro.secure=0" "ro.secure=1" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"
+			SED_CHANGE_WORD "ro.adb.secure=0" "ro.adb.secure=1" "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/default.prop"
+			SED_CHANGE_WORD "ro.secure=0" "ro.secure=1" "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/default.prop"
 		fi
 	fi
 }
@@ -1237,16 +1274,16 @@ PRINT_ROM_STATUS() {
 	else
 		echo "[NO]"
 	fi
-	if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
+	if [[ -d "$ACTIVE_PROJECT/kernel/boot.img-ramdisk" ]]; then
 		PRINT_LINE
 		echo -n "ADB? "
-		if [[ "$(grep -qi "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/ramdisk/default.prop"; echo $?)" -eq 0 ]]; then
+		if [[ "$(grep -qi "ro.adb.secure=0" "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/default.prop"; echo $?)" -eq 0 ]]; then
 			echo "[INSECURE]"
 		else
 			echo "[SECURE]"
 		fi
 		echo -n "Kernel Init.d? "
-		if [[ "$(grep -qi "sysinit" "$ACTIVE_PROJECT/kernel/ramdisk/init.rc"; echo $?)" -eq 0 ]]; then
+		if [[ "$(grep -qi "sysinit" "$ACTIVE_PROJECT/kernel/boot.img-ramdisk/init.rc"; echo $?)" -eq 0 ]]; then
 			echo "[YES]"
 		else
 			echo "[NO]"
@@ -1266,7 +1303,7 @@ PRINT_SWITCHES() {
 	echo "z     - Zipalign Everything"
 	echo "knox  - Remove KNOX"
 	echo "-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-"
-	if [[ -d "$ACTIVE_PROJECT/kernel/ramdisk" ]]; then
+	if [[ -d "$ACTIVE_PROJECT/kernel/boot.img-ramdisk" ]]; then
 		echo "kr    - Repack kernel (apply all ramdisk changes)"
 		echo "ka    - Abort repacking (abort all ramdisk changes)"
 		echo
@@ -1412,7 +1449,7 @@ case "$HOSTARCH" in
 esac
 
 # Set common tools
-ZIPALIGN="./tools/zipalign/$HOSTARCH/zipalign"
+ZIPALIGN="./$TOOLSDIR/zipalign/$HOSTARCH/zipalign"
 
 # Navigate to our folder, even if user didn't execute it from the root dir
 cd "$(dirname "$0")"
