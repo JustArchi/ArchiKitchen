@@ -130,8 +130,14 @@ BLACKLIST_CLEAN() {
 			local TARGETS="$(echo "$line" | awk '{print $1}' | cut -d '"' -f2)"
 			case "$TARGETS" in
 				/*) ;;
-				*.apk) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/app/$TARGETS.apk /system/app/$TARGETS.odex /system/priv-app/$TARGETS.apk /system/priv-app/$TARGETS.odex" ;;
-				*.jar) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/framework/$TARGETS.jar /system/framework/$TARGETS.odex" ;;
+				*.apk)
+					TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"
+					TARGETS="/system/app/$TARGETS /system/app/$TARGETS.apk /system/app/$TARGETS.odex /system/priv-app/$TARGETS /system/priv-app/$TARGETS.apk /system/priv-app/$TARGETS.odex"
+				;;
+				*.jar)
+					TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"
+					TARGETS="/system/framework/$TARGETS.jar /system/framework/$TARGETS.odex"
+				;;
 				*.so) TARGETS="/system/lib/$TARGETS" ;;
 			esac
 			for TARGET in $TARGETS; do
@@ -164,8 +170,14 @@ BLACKLIST_REMOVE() {
 			local TARGETS="$(echo "$line" | awk '{print $1}' | cut -d '"' -f2)"
 			case "$TARGETS" in
 				/*) ;;
-				*.apk) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/app/$TARGETS.apk /system/app/$TARGETS.odex /system/priv-app/$TARGETS.apk /system/priv-app/$TARGETS.odex" ;;
-				*.jar) TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"; TARGETS="/system/framework/$TARGETS.jar /system/framework/$TARGETS.odex" ;;
+				*.apk)
+					TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"
+					TARGETS="/system/app/$TARGETS /system/app/$TARGETS.apk /system/app/$TARGETS.odex /system/priv-app/$TARGETS /system/priv-app/$TARGETS.apk /system/priv-app/$TARGETS.odex"
+				;;
+				*.jar)
+					TARGETS="$(echo "$TARGETS" | rev | cut -d'.' -f2- | rev)"
+					TARGETS="/system/framework/$TARGETS.jar /system/framework/$TARGETS.odex"
+				;;
 				*.so) TARGETS="/system/lib/$TARGETS" ;;
 			esac
 			for TARGET in $TARGETS; do
