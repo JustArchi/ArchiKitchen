@@ -62,8 +62,10 @@ kies.jar
 Will result in removing:
 /system/csc (directory)
 /system/audio/file.ogg
+/system/app/Chrome (directory)
 /system/app/Chrome.apk
 /system/app/Chrome.odex
+/system/priv-app/Chrome (directory)
 /system/priv-app/Chrome.apk
 /system/priv-app/Chrome.odex
 /system/lib/libchromeview.so
