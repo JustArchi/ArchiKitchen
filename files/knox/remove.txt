@@ -19,3 +19,5 @@ KnoxVpnServices.apk
 RCPComponents.apk
 SPDClient.apk
 UniversalMDMClient.apk
+SwitchKnoxI.apk
+SwitchKnoxII.apk
