@@ -18,6 +18,9 @@ Drive.apk
 PlusOne.apk
 Books.apk
 Street.apk
+Maps.apk
+Velvet.apk
+ChromeCustomizations.apk
 Music2.apk
 
 # Samsung firmware update apks

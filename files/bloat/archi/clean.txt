@@ -1,6 +1,9 @@
 Magazines.apk
 Flipboard.apk
 BCService.apk
+TravelService_K
+SmartRemote_KL
+SamsungMusicRemoteController
 BestFace.apk
 DSM*.apk
 ELMAgent.apk
