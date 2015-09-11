@@ -1258,7 +1258,7 @@ PRINT_ROM_STATUS() {
 		echo "[NO]"
 	fi
 	echo -n "Deodexed? "
-	if [[ -f "$ACTIVE_PROJECT/system/framework/framework.odex" ]]; then
+	if [[ -f "$ACTIVE_PROJECT/system/framework/arm64/boot.oat" ]] || [[ -f "$ACTIVE_PROJECT/system/framework/arm/boot.oat" ]] || [[ -f "$ACTIVE_PROJECT/system/framework/x86_64/boot.oat" ]] || [[ -f "$ACTIVE_PROJECT/system/framework/x86/boot.oat" ]]; then
 		echo "[NO]"
 	else
 		echo "[YES]"
