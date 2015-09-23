@@ -363,37 +363,41 @@ NEWPROJECT_STOCK() {
 
 	local READY=0
 	while [[ $READY -eq 0 ]]; do
-		echo
-		echo "Please fill a path for your system.img file"
-		echo "Potential candidates:"
-		echo "=-=-=-=-=-=-=-=-="
-		find base_drops/ -type f -iname "*system*"
-		echo "=-=-=-=-=-=-=-=-="
-		read -p "system.img: " SYSTEMIMG
+		echo "Select Stock System.img.."
+		PS3="Number:"
+		systemimgarr=`ls -d  *system* `
+		select sysimg in $systemimgarr
+		do
+			break
+		done
+		SYSTEMIMG=$sysimg 
 
-		echo
-		echo "Please fill a path for your boot.img file"
-		echo "Potential candidates:"
-		echo "=-=-=-=-=-=-=-=-="
-		find base_drops/ -type f -iname "*boot*"
-		echo "=-=-=-=-=-=-=-=-="
-		read -p "boot.img: " BOOTIMG
+		echo "Select Stock Boot.img.."
+		PS3="Number:"
+		bootimgarr=`ls -d  *boot* `
+		select btimg in $bootimgarr
+		do
+			break
+		done
+		BOOTIMG=$btimg 
 
-		echo
-		echo "Please fill a path for your cache.img file. Leave empty if you don't have one"
-		echo "Potential candidates:"
-		echo "=-=-=-=-=-=-=-=-="
-		find base_drops/ -type f -iname "*cache*"
-		echo "=-=-=-=-=-=-=-=-="
-		read -p "cache.img: " CACHEIMG
+		echo "Select Stock Cache.img.."
+		PS3="Number:"
+		cacheimgarr=`ls -d  *cache* `
+		select cachimg in $cacheimgarr
+		do
+			break
+		done
+		CACHEIMG=$cachimg 
 
-		echo
-		echo "Please fill a path for your modem.bin file. Leave empty if you don't have one"
-		echo "Potential candidates:"
-		echo "=-=-=-=-=-=-=-=-="
-		find base_drops/ -type f -iname "*modem*"
-		echo "=-=-=-=-=-=-=-=-="
-		read -p "modem.bin: " MODEMIMG
+		echo "Select Stock Modem.img.."
+		PS3="Number:"
+		modemimgarr=`ls -d  *modem* `
+		select modmimg in $modemimgarr
+		do
+			break
+		done
+		MODEMIMG=$modmimg 
 
 		if [[ -f "$SYSTEMIMG" && -f "$BOOTIMG" ]] && ([[ -z "$CACHEIMG" || -f "$CACHEIMG" ]]) && ([[ -z "$MODEMIMG" || -f "$MODEMIMG" ]]); then
 			READY=1
