@@ -1,7 +1,7 @@
 This file should contain current versions of tools used by the kitchen
 Also, for a reference where to search for updates
 
-[Bak]smali          | https://bitbucket.org/JesusFreke/smali/downloads                | 2.0.5
+[Bak]smali          | https://bitbucket.org/JesusFreke/smali/downloads                | 2.2.1
 Busybox             | https://play.google.com/store/apps/details?id=stericson.busybox | 5 January 2015
 Kernel repack tools | https://github.com/osm0sis/mkbootimg                            | 8f1843e85db82d4990fecb4ec20aa2ad55ed5dbd
 MTK-Tools           | https://github.com/bgcngm/mtk-tools                             | 94e358d027bd677d9943d461ca54bc21d2068ec6
