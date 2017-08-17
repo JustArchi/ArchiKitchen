@@ -10,7 +10,13 @@ RM = del
 endif
 
 CFLAGS = -ffunction-sections -O3
-LDFLAGS = -Wl,--gc-sections
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    LDFLAGS += -Wl,-dead_strip
+else
+    LDFLAGS += -Wl,--gc-sections
+endif
 
 all:libmincrypt.a mkbootimg$(EXE) unpackbootimg$(EXE)
 
@@ -26,7 +32,7 @@ mkbootimg-static$(EXE):mkbootimg.o
 	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt $(LDFLAGS) -static -s
 
 mkbootimg.o:mkbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -I.
+	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -I. -Werror
 
 unpackbootimg$(EXE):unpackbootimg.o
 	$(CROSS_COMPILE)$(CC) -o $@ $^ $(LDFLAGS) -s
@@ -35,7 +41,7 @@ unpackbootimg-static$(EXE):unpackbootimg.o
 	$(CROSS_COMPILE)$(CC) -o $@ $^ $(LDFLAGS) -static -s
 
 unpackbootimg.o:unpackbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $<
+	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -Werror
 
 clean:
 	$(RM) mkbootimg mkbootimg-static mkbootimg.o unpackbootimg unpackbootimg-static unpackbootimg.o mkbootimg.exe mkbootimg-static.exe unpackbootimg.exe unpackbootimg-static.exe
